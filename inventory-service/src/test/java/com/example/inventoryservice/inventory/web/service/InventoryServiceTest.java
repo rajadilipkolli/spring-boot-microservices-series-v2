@@ -10,22 +10,18 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.BDDMockito.willDoNothing;
-import static org.mockito.Mockito.anyString;
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import com.example.inventoryservice.inventory.domain.models.InventoryRequest;
 import com.example.inventoryservice.inventory.exception.ProductAlreadyExistsException;
+import com.example.inventoryservice.inventory.jooq.tables.records.InventoryRecord;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 class InventoryServiceTest {
@@ -34,75 +30,25 @@ class InventoryServiceTest {
     @Mock private InventoryMapper inventoryMapper;
     @Mock private InventoryJOOQRepository inventoryJOOQRepository;
 
+    private InventoryRetryHandler retryHandler;
     private InventoryService inventoryService;
 
     @BeforeEach
     void setUp() {
+        retryHandler = new InventoryRetryHandler();
         inventoryService =
                 new InventoryService(
-                        inventoryRepository, inventoryMapper, inventoryJOOQRepository, null);
-        ReflectionTestUtils.setField(inventoryService, "self", inventoryService);
-    }
-
-    @Test
-    void testUpdateGeneratedInventory() {
-        // Mock the behavior of dependencies
-        given(inventoryRepository.findByProductCode(anyString()))
-                .willReturn(
-                        Optional.of(
-                                new Inventory()
-                                        .setId(1L)
-                                        .setProductCode("ProductCode1")
-                                        .setAvailableQuantity(100)
-                                        .setReservedItems(0)));
-        willDoNothing()
-                .given(inventoryMapper)
-                .updateInventoryFromRequest(any(InventoryRequest.class), any(Inventory.class));
-        doAnswer(
-                        invocation -> {
-                            Inventory inventory = invocation.getArgument(0);
-                            assertThat(inventory.getProductCode()).contains("ProductCode");
-                            assertThat(
-                                            inventory.getAvailableQuantity() >= 1
-                                                    && inventory.getAvailableQuantity() <= 10000)
-                                    .isTrue();
-                            return null;
-                        })
-                .when(inventoryRepository)
-                .save(any(Inventory.class));
-
-        // Execute the method to test
-        inventoryService.updateGeneratedInventory("test-batch-123", null);
-
-        // Verify interactions
-        verify(inventoryRepository, times(101)).findByProductCode(anyString());
-        verify(inventoryRepository, times(101)).save(any(Inventory.class));
-    }
-
-    @Test
-    void shouldUpdateRequestedGeneratedInventoryBatchSize() {
-        given(inventoryRepository.findByProductCode(anyString()))
-                .willReturn(
-                        Optional.of(
-                                new Inventory()
-                                        .setId(1L)
-                                        .setProductCode("ProductCode1")
-                                        .setAvailableQuantity(100)
-                                        .setReservedItems(0)));
-        willDoNothing()
-                .given(inventoryMapper)
-                .updateInventoryFromRequest(any(InventoryRequest.class), any(Inventory.class));
-
-        inventoryService.updateGeneratedInventory("test-batch-456", 5);
-
-        verify(inventoryRepository, times(5)).findByProductCode(anyString());
-        verify(inventoryRepository, times(5)).save(any(Inventory.class));
+                        inventoryRepository,
+                        inventoryMapper,
+                        inventoryJOOQRepository,
+                        retryHandler);
     }
 
     @Test
     void testSaveInventory() {
         InventoryRequest inventoryRequest = new InventoryRequest("ProductCode1", 100);
-        given(inventoryJOOQRepository.existsByProductCode("ProductCode1")).willReturn(false);
+        given(inventoryJOOQRepository.findByProductCode("ProductCode1"))
+                .willReturn(Optional.empty());
         given(inventoryMapper.toEntity(any(InventoryRequest.class)))
                 .willReturn(
                         new Inventory()
@@ -127,7 +73,12 @@ class InventoryServiceTest {
     @Test
     void testSaveInventory_Conflict() {
         InventoryRequest inventoryRequest = new InventoryRequest("ProductCode1", 100);
-        given(inventoryJOOQRepository.existsByProductCode("ProductCode1")).willReturn(true);
+        InventoryRecord activeRecord = new InventoryRecord();
+        activeRecord.setProductCode("ProductCode1");
+        activeRecord.setDeleted(false);
+
+        given(inventoryJOOQRepository.findByProductCode("ProductCode1"))
+                .willReturn(Optional.of(activeRecord));
 
         assertThatThrownBy(() -> inventoryService.saveInventory(inventoryRequest))
                 .isInstanceOf(ProductAlreadyExistsException.class)

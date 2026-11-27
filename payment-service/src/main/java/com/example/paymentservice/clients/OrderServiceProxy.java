@@ -1,8 +1,8 @@
 /*** Licensed under MIT License Copyright (c) 2026 Raja Kolli. ***/
 package com.example.paymentservice.clients;
 
+import com.example.common.dto.PagedResult;
 import com.example.paymentservice.model.response.OrderResponse;
-import com.example.paymentservice.model.response.PagedResult;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;

@@ -6,20 +6,21 @@
 
 package com.example.orderservice.web.controllers;
 
-import com.example.orderservice.config.logging.Loggable;
+import com.example.common.dto.PagedResult;
+import com.example.common.logging.LogSanitizer;
+import com.example.common.logging.Loggable;
 import com.example.orderservice.entities.OrderStatus;
 import com.example.orderservice.exception.OrderNotFoundException;
+import com.example.orderservice.model.request.OrderPaginationRequest;
 import com.example.orderservice.model.request.OrderRequest;
 import com.example.orderservice.model.response.OrderResponse;
-import com.example.orderservice.model.response.PagedResult;
 import com.example.orderservice.services.OrderGeneratorService;
 import com.example.orderservice.services.OrderService;
-import com.example.orderservice.utils.AppConstants;
-import com.example.orderservice.utils.LogSanitizer;
 import com.example.orderservice.web.api.OrderApi;
 import io.github.resilience4j.bulkhead.annotation.Bulkhead;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -29,12 +30,14 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -48,7 +51,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/orders")
 @Validated
 @Loggable
-class OrderController implements OrderApi {
+public class OrderController implements OrderApi {
 
     private static final Logger log = LoggerFactory.getLogger(OrderController.class);
     private final OrderService orderService;
@@ -60,16 +63,10 @@ class OrderController implements OrderApi {
     }
 
     @GetMapping
-    PagedResult<OrderResponse> getAllOrders(
-            @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_NUMBER, required = false)
-                    int pageNo,
-            @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_SIZE, required = false)
-                    int pageSize,
-            @RequestParam(defaultValue = AppConstants.DEFAULT_SORT_BY, required = false)
-                    String sortBy,
-            @RequestParam(defaultValue = AppConstants.DEFAULT_SORT_DIRECTION, required = false)
-                    String sortDir) {
-        return orderService.findAllOrders(pageNo, pageSize, sortBy, sortDir);
+    @Override
+    public PagedResult<OrderResponse> getAllOrders(
+            @Valid @ModelAttribute OrderPaginationRequest pagination, Sort sort) {
+        return orderService.findAllOrders(pagination.toPageable(sort));
     }
 
     @GetMapping("/{id}")
@@ -77,7 +74,8 @@ class OrderController implements OrderApi {
     @CircuitBreaker(name = "default", fallbackMethod = "hardcodedResponse")
     @RateLimiter(name = "default")
     @Bulkhead(name = "order-api")
-    ResponseEntity<OrderResponse> getOrderById(
+    @Override
+    public ResponseEntity<OrderResponse> getOrderById(
             @PathVariable Long id, @RequestParam(required = false) Integer delay) {
         // Allow tests to simulate slow responses by sleeping for `delay` seconds
         if (delay != null && delay > 0) {
@@ -103,37 +101,41 @@ class OrderController implements OrderApi {
     }
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
-    ResponseEntity<OrderResponse> createOrder(@RequestBody @Valid OrderRequest orderRequest) {
+    @Override
+    public ResponseEntity<OrderResponse> createOrder(
+            @RequestBody @Valid OrderRequest orderRequest) {
         OrderResponse orderResponse = orderService.saveOrder(orderRequest);
         return ResponseEntity.created(URI.create("/api/orders/" + orderResponse.orderId()))
                 .body(orderResponse);
     }
 
     @PutMapping("/{id}")
-    ResponseEntity<OrderResponse> updateOrder(
+    @Override
+    public ResponseEntity<OrderResponse> updateOrder(
             @PathVariable Long id, @RequestBody @Valid OrderRequest orderRequest) {
         return orderService
                 .findOrderById(id)
-                .map(
-                        orderObj ->
-                                ResponseEntity.ok(orderService.updateOrder(orderRequest, orderObj)))
+                .map(orderObj ->
+                        ResponseEntity.ok(orderService.updateOrder(orderRequest, orderObj)))
                 .orElseThrow(() -> new OrderNotFoundException(id));
     }
 
+    /**
+     * Soft deletes an active order and returns HTTP 202 with no body. Persistence failures
+     * propagate.
+     *
+     * @throws OrderNotFoundException if the order is absent or already deleted
+     */
     @DeleteMapping("/{id}")
-    ResponseEntity<Object> deleteOrder(@PathVariable Long id) {
-        return orderService
-                .findById(id)
-                .map(
-                        order -> {
-                            orderService.deleteOrderById(id);
-                            return ResponseEntity.accepted().build();
-                        })
-                .orElseThrow(() -> new OrderNotFoundException(id));
+    @Override
+    public ResponseEntity<Void> deleteOrder(@PathVariable Long id) {
+        orderService.deleteOrderById(id);
+        return ResponseEntity.accepted().build();
     }
 
     @PostMapping("/generate")
-    GenericResponse createMockOrders(
+    @Override
+    public GenericResponse createMockOrders(
             @RequestHeader(name = "Idempotency-Key", required = true) String idempotencyKey,
             @RequestParam(required = false)
                     @Min(1)
@@ -181,5 +183,10 @@ class OrderController implements OrderApi {
                 orderService.searchOrders(term, mode, customerId, status, threshold, pageable));
     }
 
-    private record GenericResponse(boolean success) {}
+    @Schema(description = "Generic operation response")
+    public record GenericResponse(
+            @Schema(
+                            description = "Indicates whether the operation was successful",
+                            example = "true")
+                    boolean success) {}
 }

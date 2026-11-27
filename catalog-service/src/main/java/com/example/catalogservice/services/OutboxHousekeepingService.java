@@ -6,11 +6,13 @@
 
 package com.example.catalogservice.services;
 
+import com.example.catalogservice.config.ApplicationProperties;
 import com.example.catalogservice.entities.OutboxEventStatus;
 import com.example.catalogservice.repositories.OutboxEventRepository;
 import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.annotation.PostConstruct;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.concurrent.atomic.AtomicLong;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.Logger;
@@ -25,6 +27,7 @@ public class OutboxHousekeepingService {
     private static final Logger log = LoggerFactory.getLogger(OutboxHousekeepingService.class);
 
     private final OutboxEventRepository outboxEventRepository;
+    private final ApplicationProperties properties;
     private final AtomicLong pendingCount = new AtomicLong(0);
     private final AtomicLong publishedCount = new AtomicLong(0);
     private final AtomicLong failedCount = new AtomicLong(0);
@@ -32,9 +35,15 @@ public class OutboxHousekeepingService {
     @Value("${application.outbox.retention-days:7}")
     private int retentionDays = 7;
 
+    @Value("${application.outbox.failed-retention-days:30}")
+    private int failedRetentionDays = 30;
+
     public OutboxHousekeepingService(
-            OutboxEventRepository outboxEventRepository, MeterRegistry meterRegistry) {
+            OutboxEventRepository outboxEventRepository,
+            ApplicationProperties properties,
+            MeterRegistry meterRegistry) {
         this.outboxEventRepository = outboxEventRepository;
+        this.properties = properties;
 
         meterRegistry.gauge("outbox.events.pending", pendingCount);
         meterRegistry.gauge("outbox.events.published", publishedCount);
@@ -42,15 +51,19 @@ public class OutboxHousekeepingService {
     }
 
     /**
-     * Validates the configured retention period during initialization.
+     * Validates the configured retention periods during initialization.
      *
-     * @throws IllegalArgumentException if {@code application.outbox.retention-days} is negative
+     * @throws IllegalArgumentException if either retention period is negative
      */
     @PostConstruct
     void validateRetentionDays() {
         if (retentionDays < 0) {
             throw new IllegalArgumentException(
                     "application.outbox.retention-days must be zero or positive");
+        }
+        if (failedRetentionDays < 0) {
+            throw new IllegalArgumentException(
+                    "application.outbox.failed-retention-days must be zero or positive");
         }
     }
 
@@ -82,12 +95,55 @@ public class OutboxHousekeepingService {
     @Scheduled(cron = "0 0 1 * * *") // Daily at 1 AM
     @SchedulerLock(name = "cleanupPublishedEventsLock")
     public void cleanupPublishedEvents() {
-        OffsetDateTime threshold = OffsetDateTime.now().minusDays(retentionDays);
+        OffsetDateTime threshold = OffsetDateTime.now(ZoneOffset.UTC).minusDays(retentionDays);
         log.info("Starting cleanup of published events older than {}", threshold);
         outboxEventRepository
                 .deleteAllByStatusAndCreatedAtBefore(OutboxEventStatus.PUBLISHED, threshold)
                 .doOnSuccess(v -> log.info("Successfully cleaned up {} old published events", v))
                 .doOnError(e -> log.error("Error during outbox cleanup", e))
+                .onErrorComplete()
+                .block();
+    }
+
+    /**
+     * Deletes events that failed strictly before the retention cutoff and waits for completion.
+     * Events without a recorded terminal processing time are retained. The cutoff is the current
+     * time minus {@code application.outbox.failed-retention-days} (default 30 days); zero uses the
+     * current time. Deletion errors emitted by the publisher are suppressed.
+     */
+    @Scheduled(cron = "0 0 2 * * *") // Daily at 2 AM
+    @SchedulerLock(name = "cleanupFailedEventsLock")
+    public void cleanupFailedEvents() {
+        OffsetDateTime threshold =
+                OffsetDateTime.now(ZoneOffset.UTC).minusDays(failedRetentionDays);
+        log.info("Starting cleanup of failed events older than {}", threshold);
+        outboxEventRepository
+                .deleteAllByStatusAndProcessedAtBefore(OutboxEventStatus.FAILED, threshold)
+                .doOnSuccess(v -> log.info("Successfully cleaned up {} old failed events", v))
+                .doOnError(e -> log.error("Error during failed outbox cleanup", e))
+                .onErrorComplete()
+                .block();
+    }
+
+    /**
+     * Reclaims processing events locked longer than the configured lock timeout and waits for
+     * completion. Increments retry counts, marking events failed when the new count reaches the
+     * retry limit and pending otherwise. Errors emitted by the publisher are suppressed.
+     */
+    @Scheduled(cron = "${application.outbox.reaper-cron:0 */1 * * * *}")
+    @SchedulerLock(name = "scheduledReapLock")
+    public void scheduledReap() {
+        log.debug("Running outbox reaper");
+        OffsetDateTime threshold =
+                OffsetDateTime.now(ZoneOffset.UTC).minus(properties.outbox().getLockTimeout());
+        outboxEventRepository
+                .reapOrphanedEvents(threshold, properties.outbox().getMaxRetries())
+                .doOnNext(count -> {
+                    if (count > 0) {
+                        log.info("Reaped {} orphaned outbox events", count);
+                    }
+                })
+                .doOnError(ex -> log.error("Error occurred while reaping outbox events", ex))
                 .onErrorComplete()
                 .block();
     }

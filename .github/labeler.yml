@@ -1,3 +1,6 @@
+"component : common-jar":
+  - changed-files:
+      - any-glob-to-any-file: 'common/**/*'
 "component : api-gateway":
   - changed-files:
       - any-glob-to-any-file: 'api-gateway/**/*'
@@ -7,6 +10,9 @@
 "component : config-server":
   - changed-files:
       - any-glob-to-any-file: 'config-server/**/*'
+"component : e2e-tests":
+  - changed-files:
+      - any-glob-to-any-file: 'e2e-tests/**/*'
 "component : inventory-service":
   - changed-files:
       - any-glob-to-any-file: 'inventory-service/**/*'
@@ -31,9 +37,11 @@ Documentation:
 "type : dependency-upgrade":
   - changed-files:
       - any-glob-to-any-file:
+          - common/pom.xml
           - api-gateway/pom.xml
           - catalog-service/pom.xml
           - config-server/pom.xml
+          - e2e-tests/pom.xml
           - inventory-service/pom.xml
           - order-service/pom.xml
           - payment-service/pom.xml

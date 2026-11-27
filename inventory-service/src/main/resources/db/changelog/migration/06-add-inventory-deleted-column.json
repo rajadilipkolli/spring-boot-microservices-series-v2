@@ -1,0 +1,48 @@
+{
+  "databaseChangeLog": [
+    {
+      "changeSet": {
+        "id": "06-add-inventory-deleted-column",
+        "author": "rajakolli",
+        "preConditions": [
+          {
+            "onFail": "MARK_RAN",
+            "not": {
+              "columnExists": {
+                "tableName": "inventory",
+                "columnName": "deleted"
+              }
+            }
+          }
+        ],
+        "changes": [
+          {
+            "addColumn": {
+              "tableName": "inventory",
+              "columns": [
+                {
+                  "column": {
+                    "name": "deleted",
+                    "type": "BOOLEAN",
+                    "defaultValueBoolean": false,
+                    "constraints": {
+                      "nullable": false
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        ],
+        "rollback": [
+          {
+            "dropColumn": {
+              "tableName": "inventory",
+              "columnName": "deleted"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

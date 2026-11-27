@@ -12,7 +12,7 @@
 	<name>spring-boot-microservices-series-v2</name>
 
 	<properties>
-        <maven.compiler.release>21</maven.compiler.release>
+        <maven.compiler.release>25</maven.compiler.release>
 		<sonar.organization>rajadilipkolli</sonar.organization>
 		<sonar.host.url>https://sonarcloud.io</sonar.host.url>
 		<sonar.exclusions>**/.github/workflows/latency_analyzer.py</sonar.exclusions>
@@ -20,6 +20,7 @@
 	</properties>
 
 	<modules>
+		<module>common</module>
 		<module>catalog-service</module>
 		<module>inventory-service</module>
 		<module>order-service</module>

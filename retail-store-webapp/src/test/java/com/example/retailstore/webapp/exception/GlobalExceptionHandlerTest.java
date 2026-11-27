@@ -15,7 +15,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
-import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -24,11 +23,13 @@ import org.springframework.web.servlet.ModelAndView;
 
 class GlobalExceptionHandlerTest {
 
-    private GlobalExceptionHandler exceptionHandler;
+    private RestExceptionHandler restExceptionHandler;
+    private ViewExceptionHandler viewExceptionHandler;
 
     @BeforeEach
     void setUp() {
-        exceptionHandler = new GlobalExceptionHandler();
+        restExceptionHandler = new RestExceptionHandler();
+        viewExceptionHandler = new ViewExceptionHandler();
     }
 
     @Test
@@ -42,10 +43,8 @@ class GlobalExceptionHandlerTest {
         when(bindingResult.getFieldErrors()).thenReturn(List.of(fieldError));
 
         // Act
-        MockHttpServletRequest request = new MockHttpServletRequest();
-        request.setRequestURI("/api/test");
-        ResponseEntity<?> responseEntity = (ResponseEntity<?>) exceptionHandler.handleValidationExceptions(ex, request);
-        ProblemDetail result = (ProblemDetail) responseEntity.getBody();
+        ResponseEntity<ProblemDetail> responseEntity = restExceptionHandler.handleValidationExceptions(ex);
+        ProblemDetail result = responseEntity.getBody();
 
         // Assert
         assertThat(result).isNotNull();
@@ -69,11 +68,8 @@ class GlobalExceptionHandlerTest {
         ConstraintViolationException ex = new ConstraintViolationException("message", violations);
 
         // Act
-        MockHttpServletRequest request = new MockHttpServletRequest();
-        request.setRequestURI("/api/test");
-        ResponseEntity<?> responseEntity =
-                (ResponseEntity<?>) exceptionHandler.handleConstraintViolationException(ex, request);
-        ProblemDetail result = (ProblemDetail) responseEntity.getBody();
+        ResponseEntity<ProblemDetail> responseEntity = restExceptionHandler.handleConstraintViolationException(ex);
+        ProblemDetail result = responseEntity.getBody();
 
         // Assert
         assertThat(result).isNotNull();
@@ -91,10 +87,8 @@ class GlobalExceptionHandlerTest {
                 HttpClientErrorException.create(HttpStatus.NOT_FOUND, "Not Found", null, null, null);
 
         // Act
-        MockHttpServletRequest request = new MockHttpServletRequest();
-        request.setRequestURI("/api/test");
-        ResponseEntity<?> responseEntity = (ResponseEntity<?>) exceptionHandler.handleHttpException(ex, request);
-        ProblemDetail result = (ProblemDetail) responseEntity.getBody();
+        ResponseEntity<ProblemDetail> responseEntity = restExceptionHandler.handleHttpException(ex);
+        ProblemDetail result = responseEntity.getBody();
 
         // Assert
         assertThat(result).isNotNull();
@@ -109,10 +103,8 @@ class GlobalExceptionHandlerTest {
         Exception ex = new RuntimeException("unexpected error");
 
         // Act
-        MockHttpServletRequest request = new MockHttpServletRequest();
-        request.setRequestURI("/api/test");
-        ResponseEntity<?> responseEntity = (ResponseEntity<?>) exceptionHandler.handleGenericException(ex, request);
-        ProblemDetail result = (ProblemDetail) responseEntity.getBody();
+        ResponseEntity<ProblemDetail> responseEntity = restExceptionHandler.handleGenericException(ex);
+        ProblemDetail result = responseEntity.getBody();
 
         // Assert
         assertThat(result).isNotNull();
@@ -127,9 +119,7 @@ class GlobalExceptionHandlerTest {
         Exception ex = new RuntimeException("unexpected error");
 
         // Act
-        MockHttpServletRequest request = new MockHttpServletRequest();
-        request.setRequestURI("/orders");
-        ModelAndView result = (ModelAndView) exceptionHandler.handleGenericException(ex, request);
+        ModelAndView result = viewExceptionHandler.handleGenericException(ex);
 
         // Assert
         assertThat(result).isNotNull();

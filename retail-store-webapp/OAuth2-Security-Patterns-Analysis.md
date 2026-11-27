@@ -2,7 +2,7 @@
 
 ## 📖 Overview
 
-This document analyzes the OAuth2 security patterns used (and not used) in the RetailStore microservices project, explaining the architectural decisions and their implications.
+This document analyzes the OAuth2 security patterns used (and not used) in the RetailStore microservices project built on **Java 25** and **Spring Boot 4.1.2**, explaining the architectural decisions and their implications.
 
 ---
 
@@ -39,7 +39,7 @@ flowchart TD
 ```properties
 # application.properties
 spring.security.oauth2.client.registration.retailstore-webapp.client-id=retailstore-webapp
-spring.security.oauth2.client.registration.retailstore-webapp.client-secret=demo-throwaway-oauth-secret
+spring.security.oauth2.client.registration.retailstore-webapp.client-secret=${OAUTH2_CLIENT_SECRET}
 spring.security.oauth2.client.registration.retailstore-webapp.authorization-grant-type=authorization_code
 ```
 
@@ -49,7 +49,7 @@ spring.security.oauth2.client.registration.retailstore-webapp.authorization-gran
   "clientId": "retailstore-webapp",
   "publicClient": false,
   "clientAuthenticatorType": "client-secret",
-  "secret": "demo-throwaway-oauth-secret"
+  "secret": "${OAUTH2_CLIENT_SECRET}"
 }
 ```
 
@@ -124,30 +124,75 @@ sequenceDiagram
 
 ### 🔍 **Current Architecture Pattern**
 
-#### **JWT Token Forwarding (Current)**
+#### **JWT Token Forwarding (Spring Boot 4.1.2 RestClient & Interceptor)**
 ```java
-// API Client Configuration
-@Bean
-OrderServiceClient orderServiceClient(SecurityHelper securityHelper) {
-    WebClient webClient = webClientBuilder
-        .filter((request, next) -> {
-            String token = securityHelper.getAccessToken(); // User's JWT
-            if (token != null) {
-                request.headers().setBearerAuth(token); // Forward same token
-            }
-            return next.exchange(request);
-        })
-        .build();
+// Location: src/main/java/com/example/retailstore/webapp/clients/ClientsConfig.java
+import org.springframework.security.oauth2.client.web.client.support.OAuth2RestClientHttpServiceGroupConfigurer;
+
+@Configuration(proxyBeanMethods = false)
+@ImportHttpServices({
+    CatalogServiceClient.class,
+    OrderServiceClient.class,
+    CustomerServiceClient.class,
+    InventoryServiceClient.class
+})
+class ClientsConfig {
+
+    @Bean
+    RestClientHttpServiceGroupConfigurer groupConfigurer(
+            ObservationRegistry observationRegistry,
+            ApplicationProperties applicationProperties) {
+        return groups -> groups.forEachClient((group, builder) -> builder
+                .baseUrl(applicationProperties.apiGatewayUrl())
+                .defaultHeaders(httpHeaders -> {
+                    httpHeaders.add(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE);
+                    httpHeaders.add(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
+                })
+                .observationRegistry(observationRegistry));
+    }
+
+    @Bean
+    OAuth2RestClientHttpServiceGroupConfigurer oauth2Configurer(
+            OAuth2AuthorizedClientManager authorizedClientManager) {
+        // Installs both the token interceptor and ClientRegistrationIdProcessor.
+        return OAuth2RestClientHttpServiceGroupConfigurer.from(authorizedClientManager);
+    }
 }
 ```
 
+Annotate each imported interface so every request carries the registration ID (existing endpoint methods are omitted here):
+
+```java
+import org.springframework.security.oauth2.client.annotation.ClientRegistrationId;
+
+@ClientRegistrationId("retailstore-webapp")
+@HttpExchange("/catalog-service")
+public interface CatalogServiceClient { /* existing methods */ }
+
+@ClientRegistrationId("retailstore-webapp")
+@HttpExchange("/order-service")
+public interface OrderServiceClient { /* existing methods */ }
+
+@ClientRegistrationId("retailstore-webapp")
+@HttpExchange("/payment-service")
+public interface CustomerServiceClient { /* existing methods */ }
+
+@ClientRegistrationId("retailstore-webapp")
+@HttpExchange("/inventory-service")
+public interface InventoryServiceClient { /* existing methods */ }
+```
+
+`ClientRegistrationIdProcessor` copies the annotation value into request attributes, which the interceptor uses to resolve the authorized client. For an authenticated user with an authorized `retailstore-webapp` client, it attaches the bearer token without a manually supplied `Authorization` header. See [Spring Security's HTTP service group configurer](https://docs.spring.io/spring-security/site/docs/current/api/org/springframework/security/oauth2/client/web/client/support/OAuth2RestClientHttpServiceGroupConfigurer.html).
+
+**Source gap:** The current `ClientsConfig.java` installs only the interceptor, and its imported interfaces lack these annotations. The configuration above is the corrected example; applying it to runtime code is still required for this registration-resolution path.
+
 #### **Service Communication Flow**
 ```
-User JWT → retailstore-webapp → API Gateway → Backend Services
-                                            → order-service
-                                            → inventory-service  
-                                            → catalog-service
-                                            → payment-service
+User JWT → retailstore-webapp (Port 8080) → API Gateway (Port 8765) → Backend Services
+                                                                    → order-service (Port 18282)
+                                                                    → inventory-service (Port 18181) 
+                                                                    → catalog-service (Port 18080)
+                                                                    → payment-service (Port 18085)
 ```
 
 ### 🔍 **What Client Credentials Would Look Like**
@@ -156,7 +201,7 @@ User JWT → retailstore-webapp → API Gateway → Backend Services
 ```properties
 # Hypothetical client credentials setup
 spring.security.oauth2.client.registration.order-service.client-id=order-service
-spring.security.oauth2.client.registration.order-service.client-secret=service-secret-123
+spring.security.oauth2.client.registration.order-service.client-secret=${ORDER_SERVICE_CLIENT_SECRET}
 spring.security.oauth2.client.registration.order-service.authorization-grant-type=client_credentials
 spring.security.oauth2.client.registration.order-service.scope=inventory:read,payment:write
 ```
@@ -261,14 +306,30 @@ public List<Order> getUserOrders(JwtAuthenticationToken jwt) {
 }
 ```
 
-#### **2. Role-Based Authorization**
+#### **2. Role-Based Authorization (ADMIN & OPERATOR Roles)**
 ```java
-// Admin-only operations enforced at each service
+// Inventory management restricted to ADMIN role (InventoryController.java)
 @PreAuthorize("hasRole('ADMIN')")
-@PutMapping("/inventory")
-public ResponseEntity<InventoryResponse> updateInventory(@RequestBody InventoryUpdateRequest request) {
-    // Only admins can update inventory
-}
+@GetMapping("/inventory")
+String showInventoriesPage(@RequestParam(defaultValue = "0") int page, Model model) { ... }
+
+@PreAuthorize("hasRole('ADMIN')")
+@PutMapping(value = "/inventory", consumes = MediaType.APPLICATION_JSON_VALUE)
+@ResponseBody
+InventoryResponse updateInventory(@Valid @RequestBody InventoryResponse inventoryResponse) { ... }
+
+// Product creation restricted to ADMIN role (ProductController.java)
+@PreAuthorize("hasRole('ADMIN')")
+@PostMapping(value = "/api/products", consumes = MediaType.APPLICATION_JSON_VALUE)
+@ResponseBody
+ProductResponse createProduct(@Valid @RequestBody ProductRequest productRequest) { ... }
+
+// Observability and Actuator metrics endpoints restricted to OPERATOR role (SecurityConfig.java)
+http.authorizeHttpRequests(c -> c
+    .requestMatchers(SecurityConstants.PUBLIC_URLS).permitAll()
+    .requestMatchers("/actuator/prometheus", "/actuator/metrics", "/actuator/metrics/**").hasRole("OPERATOR")
+    .anyRequest().authenticated()
+);
 ```
 
 #### **3. Complete Audit Trail**

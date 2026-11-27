@@ -7,9 +7,9 @@
 package com.example.catalogservice.mapper;
 
 import com.example.catalogservice.entities.Product;
-import com.example.catalogservice.model.payload.ProductDto;
 import com.example.catalogservice.model.request.ProductRequest;
 import com.example.catalogservice.model.response.ProductResponse;
+import com.example.common.dto.ProductDto;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
@@ -21,16 +21,18 @@ public interface ProductMapper {
     @Mapping(target = "inStock", ignore = true)
     ProductResponse toProductResponse(Product product);
 
-    /** Creates a product from request details, leaving its ID and version unset. */
+    /** Creates an active product from request details, leaving its ID and version unset. */
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "version", ignore = true)
+    @Mapping(target = "deleted", ignore = true)
     Product toEntity(ProductRequest productRequest);
 
     @Mapping(target = "code", source = "productCode")
     ProductDto toProductDto(Product product);
 
-    /** Copies request details into the supplied product, preserving its ID and version. */
+    /** Copies request details, preserving the supplied product's ID, version, and deletion flag. */
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "version", ignore = true)
+    @Mapping(target = "deleted", ignore = true)
     void mapProductWithRequest(ProductRequest productRequest, @MappingTarget Product product);
 }

@@ -2,7 +2,7 @@ name: retail-store-webapp
 services:
   postgresql:
     container_name: postgresql
-    image: postgres:18-alpine
+    image: postgres:19-alpine
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     environment:
       - POSTGRES_USER=appuser
@@ -22,7 +22,7 @@ services:
 
   redis:
     container_name: redis
-    image: 'redis:8.10.2-alpine'
+    image: 'redis:8.12.0-alpine'
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     ports:
       - '6379:6379'
@@ -37,7 +37,7 @@ services:
       - retail-store-network
 
   grafana-lgtm:
-    image: grafana/otel-lgtm:0.37.0
+    image: grafana/otel-lgtm:0.41.2
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     container_name: grafana-lgtm
     depends_on:
@@ -56,7 +56,7 @@ services:
       - retail-store-network
 
   otel-collector:
-    image: otel/opentelemetry-collector-contrib:0.163.2
+    image: otel/opentelemetry-collector-contrib:0.166.0
     container_name: otel-collector
     command: ["--config=/etc/otel-collector-config.yml"]
     volumes:
@@ -103,7 +103,7 @@ services:
       - retail-store-network
 
   keycloak:
-    image: quay.io/keycloak/keycloak:26.8.1
+    image: quay.io/keycloak/keycloak:26.8.2
     # command: [ 'start', '--import-realm', '--http-port=9191' ]
     command: [ 'start', '--http-port=9191' ]
     container_name: keycloak
@@ -178,9 +178,6 @@ services:
   # credentials. Override via .env.
   # ---------------------------------------------------------------------------
   terraform:
-    build:
-      context: ../../deployment/terraform
-      dockerfile: Dockerfile
     image: dockertmt/mmv2-keycloak-terraform-runner:0.0.1-SNAPSHOT
     user: "root"
     depends_on:

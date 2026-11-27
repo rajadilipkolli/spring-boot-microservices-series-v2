@@ -12,6 +12,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
@@ -20,6 +22,7 @@ import org.springframework.security.core.authority.mapping.GrantedAuthoritiesMap
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.core.oidc.OidcIdToken;
 import org.springframework.security.oauth2.core.oidc.user.OidcUserAuthority;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -45,8 +48,44 @@ class SecurityConfigTest {
                                         "default-src 'self'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://example.com; connect-src 'self'"));
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"/actuator/prometheus", "/actuator/metrics", "/actuator/metrics/jvm.memory.used"})
+    void shouldRequireLoginForMetrics(String path) throws Exception {
+        mockMvc.perform(get(path)).andExpect(status().is3xxRedirection());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"/actuator/prometheus", "/actuator/metrics", "/actuator/metrics/jvm.memory.used"})
+    @WithMockUser(roles = "USER")
+    void shouldDenyMetricsToNonOperators(String path) throws Exception {
+        mockMvc.perform(get(path)).andExpect(status().isForbidden());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"/actuator/prometheus", "/actuator/metrics", "/actuator/metrics/jvm.memory.used"})
+    @WithMockUser(roles = "OPERATOR")
+    void shouldAllowMetricsToOperators(String path) throws Exception {
+        mockMvc.perform(get(path)).andExpect(status().isOk());
+    }
+
+    @Test
+    void shouldRequireLoginForOtherPrivateRequests() throws Exception {
+        mockMvc.perform(get("/account")).andExpect(status().is3xxRedirection());
+    }
+
+    @Test
+    @WithMockUser(roles = "USER")
+    void shouldAllowOtherPrivateRequestsToAuthenticatedUsers() throws Exception {
+        mockMvc.perform(get("/account")).andExpect(status().isOk());
+    }
+
     @RestController
     static class PublicController {
+        @GetMapping({"/actuator/prometheus", "/actuator/metrics", "/actuator/metrics/jvm.memory.used", "/account"})
+        String protectedEndpoint() {
+            return "protected";
+        }
+
         @GetMapping("/")
         String home() {
             return "home";
@@ -63,7 +102,7 @@ class SecurityConfigTest {
                 "azp",
                 "retailstore-webapp",
                 "resource_access",
-                Map.of("retailstore-webapp", Map.of("roles", List.of("ADMIN", "USER"))));
+                Map.of("retailstore-webapp", Map.of("roles", List.of("ADMIN", "USER", "OPERATOR"))));
 
         OidcIdToken idToken =
                 new OidcIdToken("token-value", Instant.now(), Instant.now().plusSeconds(3600), claims);
@@ -73,6 +112,8 @@ class SecurityConfigTest {
         Collection<? extends GrantedAuthority> mappedAuthorities = mapper.mapAuthorities(Set.of(oidcUserAuthority));
 
         // Assert
-        assertThat(mappedAuthorities).extracting(GrantedAuthority::getAuthority).contains("ROLE_ADMIN", "ROLE_USER");
+        assertThat(mappedAuthorities)
+                .extracting(GrantedAuthority::getAuthority)
+                .contains("ROLE_ADMIN", "ROLE_USER", "ROLE_OPERATOR");
     }
 }

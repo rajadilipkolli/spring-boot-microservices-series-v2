@@ -6,7 +6,7 @@
 
 package com.example.orderservice.config;
 
-import com.example.orderservice.model.dtos.OrderDto;
+import com.example.common.dto.OrderDto;
 import com.example.orderservice.utils.AppConstants;
 import java.util.Objects;
 import java.util.Optional;

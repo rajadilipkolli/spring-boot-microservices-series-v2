@@ -5,20 +5,48 @@ on:
   push:
     paths:
       - 'deployment/k8s/**'
+      - 'deployment/terraform/**'
+      - 'e2e-tests/**'
       - '.github/workflows/k8s-e2e.yml'
     branches: [main]
   pull_request:
     paths:
       - 'deployment/k8s/**'
+      - 'deployment/terraform/**'
+      - 'e2e-tests/**'
       - '.github/workflows/k8s-e2e.yml'
     types:
       - opened
       - synchronize
       - reopened
 
+permissions:
+  actions: write
+  contents: read
+
 jobs:
+  terraform-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: '1.17'
+
+      - name: Terraform Format & Validation Check
+        working-directory: deployment/terraform/keycloak
+        run: |
+          set -Eeuo pipefail
+          terraform fmt -check
+          terraform init -backend=false -lockfile=readonly
+          terraform validate
+
   e2e-test:
     runs-on: ubuntu-latest
+    needs: [terraform-validate]
     timeout-minutes: 45
     steps:
       - name: Checkout Source
@@ -32,22 +60,27 @@ jobs:
           cache: 'maven'
 
       - name: Create k8s Kind Cluster
-        uses: helm/kind-action@v1.15.1
+        uses: helm/kind-action@v1.15.2
         with:
           cluster_name: kind
           config: deployment/k8s/kind-config.yaml
 
-      - name: Install NGINX Ingress Controller
+      - name: Validate Manifests Rendering with Kustomize
         run: |
           set -Eeuo pipefail
-          kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.12.1/deploy/static/provider/kind/deploy.yaml
-          kubectl wait --namespace ingress-nginx --for=condition=ready pod --selector=app.kubernetes.io/component=controller --timeout=120s
+          echo "Validating kustomize build across all overlays..."
+          kubectl kustomize deployment/k8s/base/ > /dev/null
+          for overlay in dev ci hardening-base staging prod autoscaling observability; do
+            echo "Checking overlay: $overlay"
+            kubectl kustomize "deployment/k8s/overlays/${overlay}/" > /dev/null
+          done
 
       - name: Obtain and Load Images
         run: |
           set -Eeuo pipefail
           
-          # Build the Terraform runner image locally since it's not published to Docker Hub
+          # Build the Terraform runner image locally so Kind tests against the current commit.
+          # Dedicated workflow (.github/workflows/terraform-runner-image.yml) publishes the image to DockerHub.
           docker build -t dockertmt/mmv2-keycloak-terraform-runner:0.0.1-SNAPSHOT -f deployment/terraform/Dockerfile deployment/terraform/
           
           images=(
@@ -68,84 +101,10 @@ jobs:
             kind load docker-image "$image" --name kind
           done
 
-      - name: Apply CI Overlay
+      - name: Deploy CI Overlay
         run: |
           set -Eeuo pipefail
-          kubectl apply -k deployment/k8s/overlays/ci/
-
-      - name: Wait for Webapp Hostaliases Patch
-        run: |
-          set -Eeuo pipefail
-          # This Job patches retail-store-webapp's pod template (hostAliases for
-          # keycloak.local), triggering a new rollout. Wait for it here, before
-          # any rollout/readiness checks, so those checks see the final pod spec
-          # instead of racing a mid-patch rollout.
-          kubectl wait --namespace retailstore --for=condition=complete job/patch-webapp-hostaliases --timeout=300s
-
-      - name: Wait for Infrastructure Rollouts
-        run: |
-          set -Eeuo pipefail
-          kubectl rollout status statefulset/postgresql -n retailstore --timeout=300s
-          kubectl rollout status deployment/redis -n retailstore --timeout=300s
-          kubectl rollout status statefulset/kafka -n retailstore --timeout=300s
-          kubectl rollout status deployment/keycloak -n retailstore --timeout=300s
-          for app in postgresql redis kafka keycloak; do
-            kubectl wait --namespace retailstore --for=condition=ready pod --selector="app=$app" --timeout=300s
-          done
-
-      - name: Wait for Keycloak Terraform Runner
-        run: |
-          set -Eeuo pipefail
-          echo "Waiting for keycloak-terraform-runner Job to complete..."
-          kubectl wait --namespace retailstore --for=condition=complete job/keycloak-terraform-runner --timeout=600s
-          echo "Keycloak Terraform runner completed."
-
-      - name: Wait for Platform Core Rollouts
-        run: |
-          set -Eeuo pipefail
-          kubectl rollout status deployment/config-server -n retailstore --timeout=300s
-          kubectl rollout status deployment/service-registry -n retailstore --timeout=300s
-          for app in config-server service-registry; do
-            kubectl wait --namespace retailstore --for=condition=ready pod --selector="app=$app" --timeout=300s
-          done
-
-      - name: Wait for Application Rollouts
-        run: |
-          set -Eeuo pipefail
-          for svc in catalog-service inventory-service order-service payment-service api-gateway retail-store-webapp; do
-            kubectl rollout status "deployment/$svc" -n retailstore --timeout=300s
-          done
-
-      - name: Wait for All Pods Ready
-        run: |
-          set -Eeuo pipefail
-          # Final gate before running tests: every pod (excluding completed Job
-          # pods like patch-webapp-hostaliases) must be Running with all
-          # containers ready, regardless of which resource is still settling.
-          echo "Waiting for all pods in retailstore to be Running and fully ready..."
-          timeout_seconds=300
-          elapsed=0
-          while true; do
-            not_ready=$(kubectl get pods -n retailstore -o json | jq -r '
-              [.items[] | select(.status.phase != "Succeeded")
-                | select(
-                    (.status.phase != "Running") or
-                    ([.status.containerStatuses[]?.ready] | any(. == false))
-                  )
-                | .metadata.name
-              ] | length')
-            if [ "$not_ready" -eq 0 ]; then
-              echo "All pods are Running and ready."
-              break
-            fi
-            if [ "$elapsed" -ge "$timeout_seconds" ]; then
-              echo "Timed out after ${timeout_seconds}s waiting for all pods to be ready." >&2
-              kubectl get pods -n retailstore
-              exit 1
-            fi
-            sleep 5
-            elapsed=$((elapsed + 5))
-          done
+          ./deployment/k8s/deploy.sh ci
 
       - name: Validate NetworkPolicy and PDBs
         run: |
@@ -199,14 +158,19 @@ jobs:
           ./mvnw test -pl e2e-tests -DskipE2E=false \
             -Dbase.url=http://api.retailstore.local \
             -Dkeycloak.url=http://keycloak.local \
+            -Dwebapp.url=http://retailstore.local \
+            -Djobrunr.url=http://jobrunr.local/dashboard \
             "-Dkeycloak.client.secret=${TF_VAR_webapp_client_secret:-}" \
             "-Dkeycloak.password=${KEYCLOAK_RETAIL_PASSWORD:-}"
 
-          # Request webapp via Ingress (best-effort smoke check; does not fail the job)
-          if curl -s -f http://retailstore.local > /dev/null; then
-            echo "Webapp reachable via ingress."
+          # Request webapp via Gateway (fatal check: follows redirect, 200 expected)
+          echo "Verifying webapp reachable via Gateway..."
+          webapp_status=$(curl -s -L -o /dev/null -w "%{http_code}" http://retailstore.local)
+          if [[ "$webapp_status" == "200" ]]; then
+            echo "Webapp reachable via Gateway (HTTP status: $webapp_status)."
           else
-            echo "::warning::Webapp smoke check via http://retailstore.local failed (non-fatal)."
+            echo "Fatal: Webapp smoke check via http://retailstore.local returned unexpected status: $webapp_status" >&2
+            exit 1
           fi
 
           # OAuth2 Keycloak Test (best-effort smoke check; does not fail the job)
@@ -215,11 +179,47 @@ jobs:
             -d "client_secret=demo-throwaway-oauth-secret" \
             -d "grant_type=password" \
             -d "username=retail" \
-            -d "password=retail1234" | grep -q access_token; then
+            --data-urlencode "password=${KEYCLOAK_RETAIL_PASSWORD}" | grep -q access_token; then
             echo "Keycloak token endpoint returned access_token."
           else
             echo "::warning::Keycloak smoke check failed to obtain access_token (non-fatal)."
           fi
+    
+      - name: Validate Kafka Consumer Groups Protocol
+        run: |
+          set -Eeuo pipefail
+      
+          echo "Validating Kafka consumer groups protocol..."
+      
+          groups_output=$(kubectl exec -n retailstore statefulset/kafka -- \
+            /bin/bash -c "/opt/kafka/bin/kafka-groups.sh --bootstrap-server localhost:9092 --list")
+      
+          echo "Current Kafka groups:"
+          echo "$groups_output"
+      
+          # Validate payment, stock, and product use the consumer protocol
+          for group in payment stock product; do
+            if ! echo "$groups_output" | awk -v group="$group" '
+              $1 == group && $3 == "consumer" { found = 1 }
+              END { exit !found }
+            '; then
+              echo "Error: Group '$group' is not using protocol 'consumer'."
+              exit 1
+            fi
+      
+            echo "Group '$group' verified with protocol 'consumer'."
+          done
+      
+          # Validate order-service has TYPE Classic
+          if ! echo "$groups_output" | awk '
+            $1 == "order-service" && $2 == "Classic" { found = 1 }
+            END { exit !found }
+          '; then
+            echo "Error: 'order-service' is not a Classic consumer group."
+            exit 1
+          fi
+      
+          echo "Group 'order-service' verified with Classic type."
 
       - name: Publish E2E Test Reports
         if: always()
@@ -279,6 +279,21 @@ jobs:
             kubectl rollout status "$resource" -n retailstore --timeout=5s > "k8s-diagnostics/${resource//\//-}-rollout.txt" 2>&1
           done
           
+          echo "Collecting Gateway API diagnostics..."
+          for crd in gatewayclasses gateways httproutes securitypolicies backendtrafficpolicies envoyproxies; do
+            kubectl get "$crd" -A -o yaml > "k8s-diagnostics/${crd}.yaml" 2>&1 || true
+          done
+
+          echo "Collecting envoy-gateway-system resources and pod labels..."
+          kubectl get pods,svc -n envoy-gateway-system --show-labels > k8s-diagnostics/envoy-gateway-system-resources.txt 2>&1 || true
+          kubectl describe pods -n envoy-gateway-system > k8s-diagnostics/envoy-gateway-system-pods-describe.txt 2>&1 || true
+
+          echo "Collecting controller and proxy logs..."
+          for pod in $(kubectl get pods -n envoy-gateway-system -o name); do
+            clean_pod=$(echo "$pod" | tr '/' '_')
+            kubectl logs "$pod" -n envoy-gateway-system --all-containers > "k8s-diagnostics/${clean_pod}.log" 2>&1 || true
+          done
+
           for pod in $(kubectl get pods -n retailstore -o name); do
             # Replace / in pod name (like pod/my-pod) with _ for filename
             clean_pod=$(echo $pod | tr '/' '_')

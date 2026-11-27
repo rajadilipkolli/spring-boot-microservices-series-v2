@@ -6,7 +6,7 @@
 
 package com.example.inventoryservice.inventory;
 
-import com.example.inventoryservice.inventory.domain.models.OrderDto;
+import com.example.common.dto.OrderDto;
 
 public interface InventoryOrderManageService {
 

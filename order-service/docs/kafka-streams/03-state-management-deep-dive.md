@@ -74,15 +74,11 @@ graph TB
 ### How Partitions Are Assigned
 
 ```java
-// Kafka's default partitioner for Long keys (orderId)
-public int partition(Long orderId, int numPartitions) {
-    return Math.abs(orderId.hashCode()) % numPartitions;
+// Kafka's default partitioner for String keys (e.g., orderId:attemptId or orderId)
+public int partition(String key, int numPartitions) {
+    return org.apache.kafka.common.utils.Utils.toPositive(
+            org.apache.kafka.common.utils.Utils.murmur2(key.getBytes(StandardCharsets.UTF_8))) % numPartitions;
 }
-
-// Examples with 6 partitions:
-// orderId: 1001 → hash: 1001 → 1001 % 6 = 5 → Partition 5
-// orderId: 1002 → hash: 1002 → 1002 % 6 = 0 → Partition 0  
-// orderId: 1003 → hash: 1003 → 1003 % 6 = 1 → Partition 1
 ```
 
 ## 🚀 Cache Layer Deep Dive

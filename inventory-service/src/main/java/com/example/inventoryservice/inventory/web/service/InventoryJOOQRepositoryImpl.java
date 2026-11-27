@@ -37,83 +37,136 @@ class InventoryJOOQRepositoryImpl implements InventoryJOOQRepository {
         this.dslContext = dslContext;
     }
 
+    /**
+     * Returns inventory by ID, including soft-deleted records, or empty if absent. Database
+     * failures propagate.
+     */
     @Override
-    public Optional<Inventory> findById(Long inventoryId) {
+    public Optional<InventoryRecord> findById(Long inventoryId) {
+        return dslContext.selectFrom(INVENTORY).where(INVENTORY.ID.eq(inventoryId)).fetchOptional();
+    }
+
+    /**
+     * Returns active inventory by ID, or empty if absent or deleted; database failures propagate.
+     */
+    @Override
+    public Optional<InventoryRecord> findByIdAndDeletedFalse(Long inventoryId) {
         return dslContext
                 .selectFrom(INVENTORY)
-                .where(INVENTORY.ID.eq(inventoryId))
-                .fetchOptionalInto(Inventory.class);
+                .where(INVENTORY.ID.eq(inventoryId).and(INVENTORY.DELETED.isFalse()))
+                .fetchOptional();
     }
 
+    /** Returns whether active inventory exists for the ID; database failures propagate. */
     @Override
-    public Page<Inventory> findAll(Pageable pageable) {
-        return new PageImpl<>(
-                dslContext
-                        .select(
-                                INVENTORY.ID,
-                                INVENTORY.PRODUCT_CODE,
-                                INVENTORY.QUANTITY,
-                                INVENTORY.RESERVED_ITEMS,
-                                INVENTORY.VERSION)
-                        .from(INVENTORY)
-                        .orderBy(getSortFields(pageable.getSort()))
-                        .limit(pageable.getPageSize())
-                        .offset(pageable.getOffset())
-                        .fetchInto(Inventory.class),
-                pageable,
-                dslContext.fetchCount(INVENTORY));
-    }
-
-    @Override
-    public Optional<Inventory> findByProductCode(String productCode) {
-        return dslContext
-                .select(
-                        INVENTORY.ID,
-                        INVENTORY.PRODUCT_CODE,
-                        INVENTORY.QUANTITY,
-                        INVENTORY.RESERVED_ITEMS,
-                        INVENTORY.VERSION)
-                .from(INVENTORY)
-                .where(INVENTORY.PRODUCT_CODE.eq(productCode))
-                .fetchOptionalInto(Inventory.class);
-    }
-
-    @Override
-    public Page<Inventory> findByProductCodeIn(List<String> productCodes, Pageable pageable) {
-        return new PageImpl<>(
-                dslContext
-                        .select(
-                                INVENTORY.ID,
-                                INVENTORY.PRODUCT_CODE,
-                                INVENTORY.QUANTITY,
-                                INVENTORY.RESERVED_ITEMS,
-                                INVENTORY.VERSION)
-                        .from(INVENTORY)
-                        .where(INVENTORY.PRODUCT_CODE.in(productCodes))
-                        .orderBy(getSortFields(pageable.getSort()))
-                        .limit(pageable.getPageSize())
-                        .offset(pageable.getOffset())
-                        .fetchInto(Inventory.class),
-                pageable,
-                dslContext.fetchCount(INVENTORY, INVENTORY.PRODUCT_CODE.in(productCodes)));
-    }
-
-    @Override
-    public boolean existsByProductCode(String productCode) {
+    public boolean existsByIdAndDeletedFalse(Long inventoryId) {
         return dslContext.fetchExists(
-                dslContext
-                        .selectOne()
-                        .from(INVENTORY)
-                        .where(INVENTORY.PRODUCT_CODE.eq(productCode)));
+                INVENTORY, INVENTORY.ID.eq(inventoryId).and(INVENTORY.DELETED.isFalse()));
     }
 
+    /**
+     * Returns the requested sorted page and total count of active inventory. Database failures
+     * propagate.
+     *
+     * @throws InvalidDataAccessApiUsageException if a sort property has no accessible table field
+     */
     @Override
-    @Transactional
-    public int deleteByProductCode(String productCode) {
+    public Page<InventoryRecord> findAllAndDeletedFalse(Pageable pageable) {
+        return new PageImpl<>(
+                dslContext
+                        .selectFrom(INVENTORY)
+                        .where(INVENTORY.DELETED.isFalse())
+                        .orderBy(getSortFields(pageable.getSort()))
+                        .limit(pageable.getPageSize())
+                        .offset(pageable.getOffset())
+                        .fetch(),
+                pageable,
+                dslContext.fetchCount(INVENTORY, INVENTORY.DELETED.isFalse()));
+    }
+
+    /**
+     * Returns active inventory by exact product code, or empty if absent or deleted; database
+     * failures propagate.
+     */
+    @Override
+    public Optional<InventoryRecord> findByProductCodeAndDeletedFalse(String productCode) {
         return dslContext
-                .deleteFrom(INVENTORY)
+                .selectFrom(INVENTORY)
+                .where(INVENTORY.PRODUCT_CODE.eq(productCode).and(INVENTORY.DELETED.isFalse()))
+                .fetchOptional();
+    }
+
+    /**
+     * Returns the requested sorted page of active inventory matching the supplied codes, with a
+     * total count of active matches. Database failures propagate.
+     *
+     * @throws InvalidDataAccessApiUsageException if a sort property has no accessible table field
+     */
+    @Override
+    public Page<InventoryRecord> findByProductCodeInAndDeletedFalse(
+            List<String> productCodes, Pageable pageable) {
+        return new PageImpl<>(
+                dslContext
+                        .selectFrom(INVENTORY)
+                        .where(
+                                INVENTORY
+                                        .PRODUCT_CODE
+                                        .in(productCodes)
+                                        .and(INVENTORY.DELETED.isFalse()))
+                        .orderBy(getSortFields(pageable.getSort()))
+                        .limit(pageable.getPageSize())
+                        .offset(pageable.getOffset())
+                        .fetch(),
+                pageable,
+                dslContext.fetchCount(
+                        INVENTORY,
+                        INVENTORY.PRODUCT_CODE.in(productCodes).and(INVENTORY.DELETED.isFalse())));
+    }
+
+    /**
+     * Returns whether active inventory exists for the exact product code; database failures
+     * propagate.
+     */
+    @Override
+    public boolean existsByProductCodeAndDeletedFalse(String productCode) {
+        return dslContext.fetchExists(
+                INVENTORY, INVENTORY.PRODUCT_CODE.eq(productCode).and(INVENTORY.DELETED.isFalse()));
+    }
+
+    /**
+     * Returns inventory by exact product code, including soft-deleted records, or empty if absent.
+     * Database failures propagate.
+     */
+    @Override
+    public Optional<InventoryRecord> findByProductCode(String productCode) {
+        return dslContext
+                .selectFrom(INVENTORY)
                 .where(INVENTORY.PRODUCT_CODE.eq(productCode))
-                .execute();
+                .fetchOptional();
+    }
+
+    /**
+     * Returns inventory matching the supplied codes, including soft-deleted records. Missing
+     * products are omitted; database failures propagate.
+     */
+    @Override
+    public List<InventoryRecord> findByProductCodeIn(List<String> productCodes) {
+        return dslContext
+                .selectFrom(INVENTORY)
+                .where(INVENTORY.PRODUCT_CODE.in(productCodes))
+                .fetch();
+    }
+
+    /**
+     * Returns active inventory matching the supplied codes. Missing or deleted products are
+     * omitted; database failures propagate.
+     */
+    @Override
+    public List<InventoryRecord> findByProductCodeInAndDeletedFalse(List<String> productCodes) {
+        return dslContext
+                .selectFrom(INVENTORY)
+                .where(INVENTORY.PRODUCT_CODE.in(productCodes).and(INVENTORY.DELETED.isFalse()))
+                .fetch();
     }
 
     private Collection<SortField<?>> getSortFields(Sort sortSpecification) {

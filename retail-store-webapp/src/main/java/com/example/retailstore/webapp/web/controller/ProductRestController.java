@@ -1,0 +1,52 @@
+package com.example.retailstore.webapp.web.controller;
+
+import com.example.common.dto.PagedResult;
+import com.example.common.logging.LogSanitizer;
+import com.example.retailstore.webapp.clients.catalog.CatalogServiceClient;
+import com.example.retailstore.webapp.clients.catalog.ProductRequest;
+import com.example.retailstore.webapp.clients.catalog.ProductResponse;
+import com.example.retailstore.webapp.exception.InvalidRequestException;
+import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.MediaType;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+class ProductRestController {
+
+    private static final Logger log = LoggerFactory.getLogger(ProductRestController.class);
+    private final CatalogServiceClient catalogServiceClient;
+
+    ProductRestController(CatalogServiceClient catalogServiceClient) {
+        this.catalogServiceClient = catalogServiceClient;
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping(value = "/api/products", consumes = MediaType.APPLICATION_JSON_VALUE)
+    ProductResponse createProduct(@Valid @RequestBody ProductRequest productRequest) {
+        log.info("Creating new product: {}", LogSanitizer.sanitizeForLog(String.valueOf(productRequest)));
+        try {
+            return catalogServiceClient.createProduct(productRequest);
+        } catch (Exception e) {
+            log.error("Error creating product: {}", LogSanitizer.sanitizeException(e));
+            throw new InvalidRequestException("Failed to create product", e);
+        }
+    }
+
+    @GetMapping("/api/products")
+    PagedResult<ProductResponse> products(@RequestParam(defaultValue = "0") int page) {
+        log.info("Fetching products for page: {}", LogSanitizer.sanitizeForLog(String.valueOf(page)));
+        try {
+            return catalogServiceClient.getProducts(page);
+        } catch (Exception e) {
+            log.error("Error fetching products: {}", LogSanitizer.sanitizeException(e));
+            throw new InvalidRequestException("Failed to fetch products", e);
+        }
+    }
+}

@@ -122,7 +122,7 @@ The project includes pre-configured Keycloak settings that work seamlessly in hy
 - Password: `admin1234`
 
 **Application Users:**
-- Username: `retail` / Password: `retail1234`
+- Username: `retail` / Password: `demo-throwaway-retail-pass`
 - Username: `raja` / Password: *[Reset via admin console]*
 
 ### OAuth2 Flow Resolution

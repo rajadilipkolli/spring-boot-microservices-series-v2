@@ -1,13 +1,13 @@
 /*** Licensed under MIT License Copyright (c) 2026 Raja Kolli. ***/
 package com.example.paymentservice.services;
 
+import com.example.common.dto.OrderDto;
 import com.example.paymentservice.config.ApplicationProperties;
 import com.example.paymentservice.exception.CustomerNotFoundException;
 import com.example.paymentservice.exception.OperationConflictException;
 import com.example.paymentservice.exception.ReservationNotFoundException;
 import com.example.paymentservice.jooq.tables.records.OutboxEventsRecord;
 import com.example.paymentservice.jooq.tables.records.PaymentOperationsRecord;
-import com.example.paymentservice.model.payload.OrderDto;
 import com.example.paymentservice.repositories.CustomerRepository;
 import com.example.paymentservice.repositories.OutboxEventRepository;
 import com.example.paymentservice.repositories.PaymentOperationRepository;
@@ -21,6 +21,8 @@ import io.micrometer.core.instrument.MeterRegistry;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -42,6 +44,7 @@ public class PaymentOperationEngine {
     private final ApplicationProperties properties;
     private final JsonMapper jsonMapper;
     private final TransactionTemplate transactionTemplate;
+    private final OrderPricingCalculator pricingCalculator;
 
     private final Counter zombieRejectionsCounter;
 
@@ -57,7 +60,8 @@ public class PaymentOperationEngine {
             ApplicationProperties properties,
             JsonMapper jsonMapper,
             MeterRegistry meterRegistry,
-            PlatformTransactionManager transactionManager) {
+            PlatformTransactionManager transactionManager,
+            OrderPricingCalculator pricingCalculator) {
         this.operationRepository = operationRepository;
         this.outboxEventRepository = outboxEventRepository;
         this.customerRepository = customerRepository;
@@ -65,6 +69,7 @@ public class PaymentOperationEngine {
         this.properties = properties;
         this.jsonMapper = jsonMapper;
         this.transactionTemplate = new TransactionTemplate(transactionManager);
+        this.pricingCalculator = pricingCalculator;
         this.zombieRejectionsCounter =
                 meterRegistry.counter("payment.operations.zombie.rejections");
     }
@@ -73,28 +78,35 @@ public class PaymentOperationEngine {
      * Reserves the sum of individually rounded line totals, reusing the operation for the order
      * across attempts. Non-null attempt IDs register outbox replies for eventual publication.
      * Provider exceptions return PENDING after attempting to mark the operation UNKNOWN. Arrival,
-     * completion, status persistence, and reply serialization failures propagate.
+     * completion, status persistence, and reply serialization failures propagate. New operations
+     * require an active customer; existing operations allow a retained deleted customer.
      *
      * @return the order with source PAYMENT and its stored or provider outcome, or PENDING when
      *     unclaimed or provider execution fails; a provider outcome is returned even if fenced
      *     completion loses ownership
-     * @throws CustomerNotFoundException if the customer ID is null or absent
+     * @throws CustomerNotFoundException if the customer ID is null or absent, or the customer is
+     *     deleted and no reservation operation exists
      * @throws OperationConflictException if an existing operation has a different fingerprint
      * @throws IllegalArgumentException if the calculated total is negative
      * @throws NullPointerException if the order, items, an item, its price, or its quantity is null
      */
     public OrderDto processReserve(OrderDto orderDto) {
-        validateCustomerExists(orderDto.customerId());
+        String operationKey = "payment:" + orderDto.orderId() + ":RESERVE";
+        if (operationRepository.findByOperationKey(operationKey).isPresent()) {
+            validateCustomerRetained(orderDto.customerId());
+        } else {
+            validateCustomerActive(orderDto.customerId());
+        }
         BigDecimal amount = calculateTotalOrderPrice(orderDto);
         if (amount.signum() < 0) {
             throw new IllegalArgumentException("Order total must not be negative");
         }
-        String operationKey = "payment:" + orderDto.orderId() + ":RESERVE";
         String fingerprint = generateFingerprint(orderDto.customerId(), "RESERVE", amount);
 
         String ownerId = UUID.randomUUID().toString();
         OffsetDateTime leaseUntil =
-                OffsetDateTime.now().plus(properties.getOperation().getLeaseDuration());
+                OffsetDateTime.now(ZoneOffset.UTC)
+                        .plus(properties.getOperation().getLeaseDuration());
 
         ArrivalResult arrival =
                 executeArrival(
@@ -163,7 +175,8 @@ public class PaymentOperationEngine {
      * Capture and release share one settlement key per order. A rejected reservation records a
      * NOT_APPLICABLE settlement without invoking the provider. Completed or unclaimed operations
      * return without execution; provider exceptions attempt to defer completion as UNKNOWN.
-     * Arrival, completion, and status persistence failures propagate.
+     * Arrival, completion, and status persistence failures propagate. Retained deleted customers
+     * may settle existing reservations.
      *
      * @param settlementType CAPTURE to consume reserved funds or RELEASE to restore available funds
      * @throws CustomerNotFoundException if the customer ID is null or absent
@@ -171,7 +184,7 @@ public class PaymentOperationEngine {
      * @throws OperationConflictException if an applicable existing settlement's fingerprint differs
      */
     public void processSettlement(OrderDto orderDto, String settlementType) {
-        validateCustomerExists(orderDto.customerId());
+        validateCustomerRetained(orderDto.customerId());
         String reserveOpKey = "payment:" + orderDto.orderId() + ":RESERVE";
         PaymentOperationsRecord reserveOp =
                 operationRepository
@@ -196,7 +209,8 @@ public class PaymentOperationEngine {
 
         String ownerId = UUID.randomUUID().toString();
         OffsetDateTime leaseUntil =
-                OffsetDateTime.now().plus(properties.getOperation().getLeaseDuration());
+                OffsetDateTime.now(ZoneOffset.UTC)
+                        .plus(properties.getOperation().getLeaseDuration());
 
         ArrivalResult arrival =
                 executeArrival(
@@ -272,58 +286,57 @@ public class PaymentOperationEngine {
             String attemptId,
             String ownerId,
             OffsetDateTime leaseUntil) {
-        return transactionTemplate.execute(
-                status -> {
-                    PaymentOperationsRecord record = new PaymentOperationsRecord();
-                    record.setOperationKey(operationKey);
-                    record.setOrderId(orderId);
-                    record.setCustomerId(customerId);
-                    record.setOperationType(operationType);
-                    record.setAmount(amount);
-                    record.setFingerprint(fingerprint);
-                    record.setDownstreamKey("downstream:" + operationKey);
-                    record.setStatus("RECEIVED");
-                    record.setFencingToken(0L);
+        return transactionTemplate.execute(status -> {
+            PaymentOperationsRecord record = new PaymentOperationsRecord();
+            record.setOperationKey(operationKey);
+            record.setOrderId(orderId);
+            record.setCustomerId(customerId);
+            record.setOperationType(operationType);
+            record.setAmount(amount);
+            record.setFingerprint(fingerprint);
+            record.setDownstreamKey("downstream:" + operationKey);
+            record.setStatus("RECEIVED");
+            record.setFencingToken(0L);
 
-                    PaymentOperationsRecord persisted = operationRepository.insertOrGet(record);
+            PaymentOperationsRecord persisted = operationRepository.insertOrGet(record);
 
-                    PaymentOperationsRecord locked =
-                            operationRepository.findByIdForUpdate(persisted.getId()).orElseThrow();
+            PaymentOperationsRecord locked =
+                    operationRepository.findByIdForUpdate(persisted.getId()).orElseThrow();
 
-                    if (!Objects.equals(locked.getFingerprint(), fingerprint)) {
-                        throw new OperationConflictException(
-                                "Operation fingerprint mismatch for key: " + operationKey);
-                    }
+            if (!Objects.equals(locked.getFingerprint(), fingerprint)) {
+                throw new OperationConflictException(
+                        "Operation fingerprint mismatch for key: " + operationKey);
+            }
 
-                    if ("COMPLETED".equals(locked.getStatus())) {
-                        if (attemptId != null && "RESERVE".equals(operationType)) {
-                            insertPendingReply(orderId, attemptId, locked.getResult());
-                        }
-                        return new ArrivalResult(locked, true, false, locked.getResult());
-                    }
+            if ("COMPLETED".equals(locked.getStatus())) {
+                if (attemptId != null && "RESERVE".equals(operationType)) {
+                    insertPendingReply(orderId, attemptId, locked.getResult());
+                }
+                return new ArrivalResult(locked, true, false, locked.getResult());
+            }
 
-                    if (attemptId != null && "RESERVE".equals(operationType)) {
-                        insertAwaitingReply(orderId, attemptId);
-                    }
+            if (attemptId != null && "RESERVE".equals(operationType)) {
+                insertAwaitingReply(orderId, attemptId);
+            }
 
-                    boolean claimed = false;
-                    long currentToken = locked.getFencingToken();
-                    if ("RECEIVED".equals(locked.getStatus())) {
-                        claimed =
-                                operationRepository.claim(
-                                        locked.getId(), currentToken, ownerId, leaseUntil);
-                    } else if ("IN_FLIGHT".equals(locked.getStatus())
-                            && locked.getLeaseUntil() != null
-                            && locked.getLeaseUntil().isBefore(OffsetDateTime.now())) {
-                        claimed =
-                                operationRepository.claim(
-                                        locked.getId(), currentToken, ownerId, leaseUntil);
-                    }
+            boolean claimed = false;
+            long currentToken = locked.getFencingToken();
+            if ("RECEIVED".equals(locked.getStatus())) {
+                claimed =
+                        operationRepository.claim(
+                                locked.getId(), currentToken, ownerId, leaseUntil);
+            } else if ("IN_FLIGHT".equals(locked.getStatus())
+                    && locked.getLeaseUntil() != null
+                    && locked.getLeaseUntil().isBefore(OffsetDateTime.now(ZoneOffset.UTC))) {
+                claimed =
+                        operationRepository.claim(
+                                locked.getId(), currentToken, ownerId, leaseUntil);
+            }
 
-                    PaymentOperationsRecord updatedRecord =
-                            operationRepository.findById(locked.getId()).orElse(locked);
-                    return new ArrivalResult(updatedRecord, false, claimed, null);
-                });
+            PaymentOperationsRecord updatedRecord =
+                    operationRepository.findById(locked.getId()).orElse(locked);
+            return new ArrivalResult(updatedRecord, false, claimed, null);
+        });
     }
 
     /**
@@ -338,36 +351,33 @@ public class PaymentOperationEngine {
      */
     public boolean executeCompletion(
             Long operationId, long fencingToken, OrderDto orderDto, String outcome) {
-        return transactionTemplate.execute(
-                status -> {
-                    boolean completed =
-                            operationRepository.complete(
-                                    operationId, fencingToken, "COMPLETED", outcome);
-                    if (!completed) {
-                        return false;
-                    }
+        return transactionTemplate.execute(status -> {
+            boolean completed =
+                    operationRepository.complete(operationId, fencingToken, "COMPLETED", outcome);
+            if (!completed) {
+                return false;
+            }
 
-                    for (OutboxEventsRecord reply :
-                            outboxEventRepository.findAwaitingReserveReplies(
-                                    String.valueOf(orderDto.orderId()))) {
-                        String attemptId =
-                                reply.getEventType().substring("RESERVE_REPLY:".length());
-                        OrderDto replyDto =
-                                new OrderDto(
-                                        orderDto.orderId(),
-                                        orderDto.customerId(),
-                                        outcome,
-                                        AppConstants.SOURCE,
-                                        orderDto.items(),
-                                        attemptId);
-                        outboxEventRepository.promoteToPending(
-                                reply.getAggregateId(), reply.getEventType(), serialize(replyDto));
-                    }
-                    if (orderDto.attemptId() != null) {
-                        insertPendingReply(orderDto.orderId(), orderDto.attemptId(), outcome);
-                    }
-                    return true;
-                });
+            for (OutboxEventsRecord reply :
+                    outboxEventRepository.findAwaitingReserveReplies(
+                            String.valueOf(orderDto.orderId()))) {
+                String attemptId = reply.getEventType().substring("RESERVE_REPLY:".length());
+                OrderDto replyDto =
+                        new OrderDto(
+                                orderDto.orderId(),
+                                orderDto.customerId(),
+                                outcome,
+                                AppConstants.SOURCE,
+                                orderDto.items(),
+                                attemptId);
+                outboxEventRepository.promoteToPending(
+                        reply.getAggregateId(), reply.getEventType(), serialize(replyDto));
+            }
+            if (orderDto.attemptId() != null) {
+                insertPendingReply(orderDto.orderId(), orderDto.attemptId(), outcome);
+            }
+            return true;
+        });
     }
 
     /**
@@ -379,10 +389,9 @@ public class PaymentOperationEngine {
     public boolean executeSettlementCompletion(
             Long operationId, long fencingToken, String outcome) {
         return Boolean.TRUE.equals(
-                transactionTemplate.execute(
-                        status ->
-                                operationRepository.complete(
-                                        operationId, fencingToken, "COMPLETED", outcome)));
+                transactionTemplate.execute(status ->
+                        operationRepository.complete(
+                                operationId, fencingToken, "COMPLETED", outcome)));
     }
 
     /**
@@ -394,14 +403,13 @@ public class PaymentOperationEngine {
      */
     public boolean transitionToUnknown(Long operationId, long fencingToken) {
         return Boolean.TRUE.equals(
-                transactionTemplate.execute(
-                        status -> {
-                            OffsetDateTime nextReconcileAt =
-                                    OffsetDateTime.now()
-                                            .plus(properties.getReconciler().getInitialBackoff());
-                            return operationRepository.updateStatus(
-                                    operationId, fencingToken, "UNKNOWN", nextReconcileAt);
-                        }));
+                transactionTemplate.execute(status -> {
+                    OffsetDateTime nextReconcileAt =
+                            OffsetDateTime.now(ZoneOffset.UTC)
+                                    .plus(properties.getReconciler().getInitialBackoff());
+                    return operationRepository.updateStatus(
+                            operationId, fencingToken, "UNKNOWN", nextReconcileAt);
+                }));
     }
 
     /**
@@ -413,25 +421,23 @@ public class PaymentOperationEngine {
      */
     public PaymentOperationsRecord recordNotApplicableSettlement(
             OrderDto orderDto, String settlementType) {
-        return transactionTemplate.execute(
-                status -> {
-                    String operationKey = "payment:" + orderDto.orderId() + ":SETTLE";
-                    String fingerprint =
-                            generateFingerprint(
-                                    orderDto.customerId(), settlementType, BigDecimal.ZERO);
-                    PaymentOperationsRecord record = new PaymentOperationsRecord();
-                    record.setOperationKey(operationKey);
-                    record.setOrderId(orderDto.orderId());
-                    record.setCustomerId(orderDto.customerId());
-                    record.setOperationType(settlementType);
-                    record.setAmount(BigDecimal.ZERO);
-                    record.setFingerprint(fingerprint);
-                    record.setDownstreamKey("downstream:" + operationKey);
-                    record.setStatus("COMPLETED");
-                    record.setResult("NOT_APPLICABLE");
-                    record.setFencingToken(0L);
-                    return operationRepository.insertOrGet(record);
-                });
+        return transactionTemplate.execute(status -> {
+            String operationKey = "payment:" + orderDto.orderId() + ":SETTLE";
+            String fingerprint =
+                    generateFingerprint(orderDto.customerId(), settlementType, BigDecimal.ZERO);
+            PaymentOperationsRecord record = new PaymentOperationsRecord();
+            record.setOperationKey(operationKey);
+            record.setOrderId(orderDto.orderId());
+            record.setCustomerId(orderDto.customerId());
+            record.setOperationType(settlementType);
+            record.setAmount(BigDecimal.ZERO);
+            record.setFingerprint(fingerprint);
+            record.setDownstreamKey("downstream:" + operationKey);
+            record.setStatus("COMPLETED");
+            record.setResult("NOT_APPLICABLE");
+            record.setFencingToken(0L);
+            return operationRepository.insertOrGet(record);
+        });
     }
 
     /** Registers a payload-free reply awaiting the reserve result, preserving an existing reply. */
@@ -453,13 +459,7 @@ public class PaymentOperationEngine {
      */
     private OutboxEventsRecord insertPendingReply(Long orderId, String attemptId, String outcome) {
         OrderDto replyDto =
-                new OrderDto(
-                        orderId,
-                        null,
-                        outcome,
-                        AppConstants.SOURCE,
-                        java.util.List.of(),
-                        attemptId);
+                new OrderDto(orderId, null, outcome, AppConstants.SOURCE, List.of(), attemptId);
         String payloadJson = serialize(replyDto);
 
         OutboxEventsRecord outbox = new OutboxEventsRecord();
@@ -474,11 +474,22 @@ public class PaymentOperationEngine {
     }
 
     /**
-     * Checks that the customer exists; database lookup failures propagate.
+     * Checks that the customer exists and is active; database lookup failures propagate.
+     *
+     * @throws CustomerNotFoundException if the ID is null, absent, or soft-deleted
+     */
+    private void validateCustomerActive(Long customerId) {
+        if (customerId == null || customerRepository.findActiveById(customerId).isEmpty()) {
+            throw new CustomerNotFoundException(customerId);
+        }
+    }
+
+    /**
+     * Checks that the customer exists (active or soft-deleted); database lookup failures propagate.
      *
      * @throws CustomerNotFoundException if the ID is null or absent
      */
-    private void validateCustomerExists(Long customerId) {
+    private void validateCustomerRetained(Long customerId) {
         if (customerId == null || customerRepository.findById(customerId).isEmpty()) {
             throw new CustomerNotFoundException(customerId);
         }
@@ -491,10 +502,7 @@ public class PaymentOperationEngine {
      * @throws NullPointerException if the order, items, an item, its price, or its quantity is null
      */
     private BigDecimal calculateTotalOrderPrice(OrderDto orderDto) {
-        return orderDto.items().stream()
-                .map(OrderDto.OrderItemDto::getPrice)
-                .reduce(BigDecimal.ZERO, BigDecimal::add)
-                .setScale(2, RoundingMode.HALF_UP);
+        return pricingCalculator.calculateTotalOrderPrice(orderDto);
     }
 
     /**

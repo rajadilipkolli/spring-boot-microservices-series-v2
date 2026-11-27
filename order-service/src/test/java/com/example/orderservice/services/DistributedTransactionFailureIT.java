@@ -9,10 +9,10 @@ package com.example.orderservice.services;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
+import com.example.common.dto.OrderDto;
 import com.example.orderservice.common.AbstractIntegrationTest;
 import com.example.orderservice.entities.Order;
 import com.example.orderservice.entities.OrderStatus;
-import com.example.orderservice.model.dtos.OrderDto;
 import com.example.orderservice.util.TestData;
 import java.time.Duration;
 import java.util.Optional;
@@ -59,16 +59,13 @@ class DistributedTransactionFailureIT extends AbstractIntegrationTest {
         // Assert that the order is eventually rejected
         await().atMost(60, TimeUnit.SECONDS)
                 .pollInterval(2, TimeUnit.SECONDS)
-                .untilAsserted(
-                        () -> {
-                            Optional<Order> order = orderRepository.findById(testOrder.getId());
-                            assertThat(order)
-                                    .isPresent()
-                                    .hasValueSatisfying(
-                                            o ->
-                                                    assertThat(o.getStatus())
-                                                            .isEqualTo(OrderStatus.ROLLBACK));
-                        });
+                .untilAsserted(() -> {
+                    Optional<Order> order = orderRepository.findById(testOrder.getId());
+                    assertThat(order)
+                            .isPresent()
+                            .hasValueSatisfying(
+                                    o -> assertThat(o.getStatus()).isEqualTo(OrderStatus.ROLLBACK));
+                });
     }
 
     @Test
@@ -77,14 +74,12 @@ class DistributedTransactionFailureIT extends AbstractIntegrationTest {
         // Simulate timeout by not sending any confirmation messages
         await().atMost(20, TimeUnit.SECONDS)
                 .pollInterval(Duration.ofSeconds(1))
-                .untilAsserted(
-                        () -> {
-                            Order updatedOrder =
-                                    orderRepository.findById(testOrder.getId()).orElseThrow();
+                .untilAsserted(() -> {
+                    Order updatedOrder = orderRepository.findById(testOrder.getId()).orElseThrow();
 
-                            // The order should be picked up by the retry job and marked as failed
-                            assertThat(updatedOrder.getStatus()).isEqualTo(OrderStatus.NEW);
-                        });
+                    // The order should be picked up by the retry job and marked as failed
+                    assertThat(updatedOrder.getStatus()).isEqualTo(OrderStatus.NEW);
+                });
     }
 
     @Test
@@ -103,12 +98,10 @@ class DistributedTransactionFailureIT extends AbstractIntegrationTest {
         // Assert - Order should stay in NEW state
         await().atMost(10, TimeUnit.SECONDS)
                 .pollInterval(Duration.ofSeconds(1))
-                .untilAsserted(
-                        () -> {
-                            Order updatedOrder =
-                                    orderRepository.findById(testOrder.getId()).orElseThrow();
-                            assertThat(updatedOrder.getStatus()).isEqualTo(OrderStatus.NEW);
-                        });
+                .untilAsserted(() -> {
+                    Order updatedOrder = orderRepository.findById(testOrder.getId()).orElseThrow();
+                    assertThat(updatedOrder.getStatus()).isEqualTo(OrderStatus.NEW);
+                });
     }
 
     @Test
@@ -153,11 +146,9 @@ class DistributedTransactionFailureIT extends AbstractIntegrationTest {
         // Assert - Final state should still be correct
         await().atMost(60, TimeUnit.SECONDS)
                 .pollInterval(Duration.ofSeconds(2))
-                .untilAsserted(
-                        () -> {
-                            Order updatedOrder =
-                                    orderRepository.findById(testOrder.getId()).orElseThrow();
-                            assertThat(updatedOrder.getStatus()).isEqualTo(OrderStatus.CONFIRMED);
-                        });
+                .untilAsserted(() -> {
+                    Order updatedOrder = orderRepository.findById(testOrder.getId()).orElseThrow();
+                    assertThat(updatedOrder.getStatus()).isEqualTo(OrderStatus.CONFIRMED);
+                });
     }
 }

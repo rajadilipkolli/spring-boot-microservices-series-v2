@@ -6,6 +6,7 @@
 
 package com.example.inventoryservice.inventory;
 
+import com.example.common.dto.PagedResult;
 import com.example.inventoryservice.inventory.domain.models.*;
 import java.util.List;
 import java.util.Optional;
@@ -23,14 +24,6 @@ public interface InventoryAPI {
      */
     PagedResult<InventoryResponse> findAllInventories(
             int pageNo, int pageSize, String sortBy, String sortDir);
-
-    /**
-     * Finds inventory by its identifier.
-     *
-     * @param id inventory identifier
-     * @return the matching inventory, or an empty optional when absent
-     */
-    Optional<InventoryResponse> findInventoryById(Long id);
 
     /**
      * Finds inventory by its product code.
@@ -54,12 +47,13 @@ public interface InventoryAPI {
             List<String> codes, int pageNo, int pageSize, String sortBy, String sortDir);
 
     /**
-     * Creates inventory for a product code that is not already present.
+     * Creates inventory or restores deleted inventory with the requested available quantity,
+     * preserving its ID and reserved quantity.
      *
      * @param inventoryRequest product code and initial available quantity
      * @return the saved inventory
      * @throws com.example.inventoryservice.inventory.exception.ProductAlreadyExistsException if the
-     *     product code already exists
+     *     product code already has active inventory
      */
     InventoryResponse saveInventory(InventoryRequest inventoryRequest);
 
@@ -102,28 +96,10 @@ public interface InventoryAPI {
     void updateGeneratedInventory(String idempotencyKey, Integer batchSize);
 
     /**
-     * Reserves stock for a {@code NEW} order and publishes its acceptance or rejection.
+     * Checks whether active inventory exists by its identifier. Persistence failures propagate.
      *
-     * <p>Orders with other statuses are ignored. Rejected orders leave stock unchanged.
-     *
-     * @param orderDto order and item quantities to reserve
+     * @param id inventory identifier
+     * @return true if the inventory exists and is not soft deleted, false otherwise
      */
-    void reserve(OrderDto orderDto);
-
-    /**
-     * Consumes reserved stock for confirmed orders or restores stock for external rollbacks.
-     *
-     * <p>Missing products are skipped. Rollbacks originating from {@code INVENTORY} and statuses
-     * other than {@code CONFIRMED} or {@code ROLLBACK} leave quantities unchanged.
-     *
-     * @param orderDto order whose reservation should be finalized or rolled back
-     */
-    void confirm(OrderDto orderDto);
-
-    /**
-     * Creates inventory for a product, ignoring an already present product code.
-     *
-     * @param productDto product whose code identifies the inventory record
-     */
-    void manage(ProductDto productDto);
+    boolean existsInventoryById(Long id);
 }

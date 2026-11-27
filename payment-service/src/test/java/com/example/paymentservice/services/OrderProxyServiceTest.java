@@ -11,6 +11,7 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 import com.example.paymentservice.clients.OrderServiceProxy;
 import com.example.paymentservice.model.response.OrderResponse;
 import java.math.BigDecimal;
+import java.time.Instant;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -41,7 +42,7 @@ class OrderProxyServiceTest {
     }
 
     @ParameterizedTest
-    @CsvSource({"1,10,id,asc,0", "3,5,createdDate,desc,2"})
+    @CsvSource({"0,10,id,asc,0", "2,5,createdDate,desc,2"})
     void shouldSendPageableParametersAndPreserveOrderDetails(
             int pageNo, int pageSize, String sortBy, String sortDir, int expectedPage) {
         server.expect(queryParam("page", Integer.toString(expectedPage)))
@@ -50,27 +51,28 @@ class OrderProxyServiceTest {
                 .andRespond(
                         withSuccess(
                                 """
-                        {
-                          "data": [{
-                            "orderId": "9007199254740993", "customerId": "9007199254740995",
-                            "status": "COMPLETED", "source": "PAYMENT",
-                            "createdDate": "2026-10-10T12:00:00", "totalPrice": 20.00,
-                            "deliveryAddress": {
-                              "addressLine1": "Street", "addressLine2": "Suite",
-                              "city": "City", "state": "State", "zipCode": "Zip", "country": "Country"
-                            },
-                            "items": [{"itemId": "9007199254740997", "productId": "P1",
-                              "quantity": 2, "productPrice": 10.00, "price": 20.00}]
-                          }],
-                          "totalElements": 1, "pageNumber": 1, "totalPages": 1,
-                          "isFirst": true, "isLast": true, "hasNext": false, "hasPrevious": false
-                        }
-                        """,
+                                {
+                                  "data": [{
+                                    "orderId": "9007199254740993", "customerId": "9007199254740995",
+                                    "status": "COMPLETED", "source": "PAYMENT",
+                                    "createdDate": "2026-10-10T12:00:00", "totalPrice": 20.00,
+                                    "deliveryAddress": {
+                                      "addressLine1": "Street", "addressLine2": "Suite",
+                                      "city": "City", "state": "State", "zipCode": "Zip", "country": "Country"
+                                    },
+                                    "items": [{"itemId": "9007199254740997", "productId": "P1",
+                                      "quantity": 2, "productPrice": 10.00, "price": 20.00}]
+                                  }],
+                                  "totalElements": 1, "pageNumber": 1, "totalPages": 1,
+                                  "isFirst": true, "isLast": true, "hasNext": false, "hasPrevious": false
+                                }
+                                """,
                                 MediaType.APPLICATION_JSON));
 
         var result =
                 service.getOrdersByCustomerId(9007199254740995L, pageNo, pageSize, sortBy, sortDir);
         OrderResponse order = result.data().getFirst();
+        assertThat(order.createdDate()).isEqualTo(Instant.parse("2026-10-10T12:00:00Z"));
         assertThat(order.deliveryAddress())
                 .isEqualTo(
                         new OrderResponse.Address(
@@ -89,6 +91,44 @@ class OrderProxyServiceTest {
     }
 
     @ParameterizedTest
+    @CsvSource({
+        "2026-10-10T12:00:00, 2026-10-10T12:00:00Z",
+        "2026-10-10T12:00:00Z, 2026-10-10T12:00:00Z",
+        "2026-10-10T17:30:00+05:30, 2026-10-10T12:00:00Z"
+    })
+    void shouldAcceptDifferentTimestampFormats(String inputDate, String expectedInstant) {
+        server.expect(
+                        requestTo(
+                                "http://order-service/api/orders/customer/1?page=0&size=10&sort=id%2Casc"))
+                .andRespond(
+                        withSuccess(
+                                """
+                                {
+                                  "data": [{
+                                    "orderId": "1", "customerId": "1",
+                                    "status": "COMPLETED", "source": "PAYMENT",
+                                    "createdDate": "%s", "totalPrice": 20.00,
+                                    "deliveryAddress": {
+                                      "addressLine1": "Street", "addressLine2": "Suite",
+                                      "city": "City", "state": "State", "zipCode": "Zip", "country": "Country"
+                                    },
+                                    "items": [{"itemId": "1", "productId": "P1",
+                                      "quantity": 2, "productPrice": 10.00, "price": 20.00}]
+                                  }],
+                                  "totalElements": 1, "pageNumber": 1, "totalPages": 1,
+                                  "isFirst": true, "isLast": true, "hasNext": false, "hasPrevious": false
+                                }
+                                """
+                                        .formatted(inputDate),
+                                MediaType.APPLICATION_JSON));
+
+        var result = service.getOrdersByCustomerId(1L, 0, 10, "id", "asc");
+        assertThat(result.data().getFirst().createdDate())
+                .isEqualTo(Instant.parse(expectedInstant));
+        server.verify();
+    }
+
+    @ParameterizedTest
     @ValueSource(ints = {400, 503})
     void shouldPropagateHttpFailure(int status) {
         server.expect(
@@ -96,7 +136,7 @@ class OrderProxyServiceTest {
                                 "http://order-service/api/orders/customer/1?page=0&size=10&sort=id%2Casc"))
                 .andRespond(withStatus(HttpStatus.valueOf(status)));
 
-        assertThatThrownBy(() -> service.getOrdersByCustomerId(1L, 1, 10, "id", "asc"))
+        assertThatThrownBy(() -> service.getOrdersByCustomerId(1L, 0, 10, "id", "asc"))
                 .isInstanceOfSatisfying(
                         RestClientResponseException.class,
                         exception ->

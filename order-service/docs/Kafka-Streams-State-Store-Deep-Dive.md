@@ -71,15 +71,13 @@ graph TB
 ### Partition Assignment Logic
 
 ```java
-// Kafka's default partitioner for Long keys (orderId)
-public int partition(Long orderId, int numPartitions) {
-    return Math.abs(orderId.hashCode()) % numPartitions;
+// Kafka's default partitioner for String keys (e.g. orderId:attemptId)
+public int partition(String key, int numPartitions) {
+    return org.apache.kafka.common.utils.Utils.toPositive(
+            org.apache.kafka.common.utils.Utils.murmur2(key.getBytes(StandardCharsets.UTF_8))) % numPartitions;
 }
 
-// Examples:
-// orderId: 1001 → hash: 1001 → 1001 % 3 = 2 → Partition 2
-// orderId: 1002 → hash: 1002 → 1002 % 3 = 0 → Partition 0  
-// orderId: 1003 → hash: 1003 → 1003 % 3 = 1 → Partition 1
+// Partitioning ensures messages with identical keys always land on the same stream task/partition.
 ```
 
 ### Sample Data in Each Partition

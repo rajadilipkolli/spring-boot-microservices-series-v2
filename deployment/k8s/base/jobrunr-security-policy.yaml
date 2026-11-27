@@ -1,0 +1,13 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: jobrunr-security-policy
+  namespace: retailstore
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: internal-jobrunr-route
+  basicAuth:
+    users:
+      name: jobrunr-auth

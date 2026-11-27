@@ -43,36 +43,8 @@
       "allDeclaredFields": true
     },
     {
-      "condition": {"typeReached": "com.example.catalogservice.model.payload.ProductDto"},
-      "type": "com.example.catalogservice.model.payload.ProductDto",
-      "allDeclaredConstructors": true,
-      "allDeclaredMethods": true,
-      "allDeclaredFields": true
-    },
-    {
       "condition": {"typeReached": "com.example.catalogservice.model.request.ProductRequest"},
       "type": "com.example.catalogservice.model.request.ProductRequest",
-      "allDeclaredConstructors": true,
-      "allDeclaredMethods": true,
-      "allDeclaredFields": true
-    },
-    {
-      "condition": {"typeReached": "com.example.catalogservice.model.response.InventoryResponse"},
-      "type": "com.example.catalogservice.model.response.InventoryResponse",
-      "allDeclaredConstructors": true,
-      "allDeclaredMethods": true,
-      "allDeclaredFields": true
-    },
-    {
-      "condition": {"typeReached": "com.example.catalogservice.model.response.PagedResult"},
-      "type": "com.example.catalogservice.model.response.PagedResult",
-      "allDeclaredConstructors": true,
-      "allDeclaredMethods": true,
-      "allDeclaredFields": true
-    },
-    {
-      "condition": {"typeReached": "com.example.catalogservice.model.response.ProductResponse"},
-      "type": "com.example.catalogservice.model.response.ProductResponse",
       "allDeclaredConstructors": true,
       "allDeclaredMethods": true,
       "allDeclaredFields": true

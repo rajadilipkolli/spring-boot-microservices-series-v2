@@ -6,7 +6,7 @@
 
 package com.example.inventoryservice.inventory.events;
 
-import com.example.inventoryservice.inventory.domain.models.OrderDto;
+import com.example.common.dto.OrderDto;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import org.springframework.modulith.events.Externalized;

@@ -7,28 +7,48 @@
 package com.example.inventoryservice.inventory.web.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.awaitility.Awaitility.await;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 
-import com.example.inventoryservice.inventory.domain.models.OrderDto;
+import com.example.common.dto.OrderDto;
+import com.example.inventoryservice.inventory.events.InventoryProcessedEvent;
+import com.example.inventoryservice.inventory.jooq.tables.records.InventoryRecord;
 import com.example.inventoryservice.inventory.utils.AppConstants;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 
 class InventoryOrderManageServiceImplIT extends AbstractIntegrationTest {
 
+    private static final AtomicLong ORDER_ID_GENERATOR = new AtomicLong(1000L);
     private Inventory product1;
+
+    @Autowired private InventoryMapper inventoryMapper;
+    @Autowired private InventoryRetryHandler retryHandler;
+    @Autowired private MeterRegistry meterRegistry;
 
     /** Clears persisted inventory and seeds two products with available and reserved quantities. */
     @BeforeEach
     void setUp() {
-        // Clear existing inventory
+        // Clear existing processed events and inventory
+        processedOrderEventRepository.deleteAllInBatch();
         inventoryRepository.deleteAll();
 
         // Create test inventory items
@@ -64,26 +84,29 @@ class InventoryOrderManageServiceImplIT extends AbstractIntegrationTest {
             Map<String, int[]> expectedChanges) {
 
         // Capture initial state of all products
-        Map<String, Inventory> initialState =
-                inventoryRepository
-                        .findByProductCodeIn(new ArrayList<>(expectedChanges.keySet()))
+        Map<String, InventoryRecord> initialState =
+                inventoryJOOQRepository
+                        .findByProductCodeInAndDeletedFalse(
+                                new ArrayList<>(expectedChanges.keySet()))
                         .stream()
-                        .collect(Collectors.toMap(Inventory::getProductCode, Function.identity()));
+                        .collect(
+                                Collectors.toMap(
+                                        InventoryRecord::getProductCode, Function.identity()));
 
         // Perform the operation
         OrderDto result = operation.apply(orderDto);
 
         // Verify each product's changes
         for (String productCode : expectedChanges.keySet()) {
-            Inventory initial = initialState.get(productCode);
-            Inventory updated = inventoryJOOQRepository.findById(initial.getId()).orElseThrow();
+            InventoryRecord initial = initialState.get(productCode);
+            InventoryRecord updated =
+                    inventoryJOOQRepository.findById(initial.getId()).orElseThrow();
 
             int[] changes = expectedChanges.get(productCode);
             int availableQtyChange = changes[0];
             int reservedItemsChange = changes[1];
 
-            assertThat(updated.getAvailableQuantity())
-                    .isEqualTo(initial.getAvailableQuantity() + availableQtyChange);
+            assertThat(updated.getQuantity()).isEqualTo(initial.getQuantity() + availableQtyChange);
             assertThat(updated.getReservedItems())
                     .isEqualTo(initial.getReservedItems() + reservedItemsChange);
         }
@@ -93,9 +116,10 @@ class InventoryOrderManageServiceImplIT extends AbstractIntegrationTest {
 
     @Test
     void confirmOrderWithConfirmedStatus_ShouldDecreaseReservedItems() { // Arrange
+        Long orderId = ORDER_ID_GENERATOR.incrementAndGet();
         OrderDto.OrderItemDto item1 = new OrderDto.OrderItemDto(1L, "product1", 20, BigDecimal.TEN);
         OrderDto.OrderItemDto item2 = new OrderDto.OrderItemDto(2L, "product2", 10, BigDecimal.TEN);
-        OrderDto orderDto = new OrderDto(1L, 2L, "CONFIRMED", "TEST", List.of(item1, item2));
+        OrderDto orderDto = new OrderDto(orderId, 2L, "CONFIRMED", "TEST", List.of(item1, item2));
 
         // Define expected changes: [availableQtyChange, reservedItemsChange]
         Map<String, int[]> expectedChanges =
@@ -107,7 +131,7 @@ class InventoryOrderManageServiceImplIT extends AbstractIntegrationTest {
         // Run operation and assert changes
         assertInventoryChanges(
                 orderDto,
-                (order) -> {
+                order -> {
                     inventoryOrderManageService.confirm(order);
                     return order;
                 },
@@ -117,10 +141,12 @@ class InventoryOrderManageServiceImplIT extends AbstractIntegrationTest {
     @Test
     void confirmOrderWithRollbackStatus_ShouldDecreaseReservedItemsAndIncreaseAvailableQuantity() {
         // Arrange
+        Long orderId = ORDER_ID_GENERATOR.incrementAndGet();
         OrderDto.OrderItemDto item1 = new OrderDto.OrderItemDto(1L, "product1", 20, BigDecimal.TEN);
         OrderDto.OrderItemDto item2 = new OrderDto.OrderItemDto(2L, "product2", 10, BigDecimal.TEN);
         // Not inventory source to trigger rollback logic
-        OrderDto orderDto = new OrderDto(1L, 1L, "ROLLBACK", "OTHER_SOURCE", List.of(item1, item2));
+        OrderDto orderDto =
+                new OrderDto(orderId, 1L, "ROLLBACK", "OTHER_SOURCE", List.of(item1, item2));
 
         // Define expected changes: [availableQtyChange, reservedItemsChange]
         Map<String, int[]> expectedChanges =
@@ -132,7 +158,7 @@ class InventoryOrderManageServiceImplIT extends AbstractIntegrationTest {
         // Run operation and assert changes
         assertInventoryChanges(
                 orderDto,
-                (order) -> {
+                order -> {
                     inventoryOrderManageService.confirm(order);
                     return order;
                 },
@@ -142,11 +168,12 @@ class InventoryOrderManageServiceImplIT extends AbstractIntegrationTest {
     @Test
     void confirmOrderWithRollbackStatusAndInventorySource_ShouldNotChangeInventory() {
         // Arrange
+        Long orderId = ORDER_ID_GENERATOR.incrementAndGet();
         OrderDto.OrderItemDto item1 = new OrderDto.OrderItemDto(1L, "product1", 20, BigDecimal.TEN);
         OrderDto.OrderItemDto item2 = new OrderDto.OrderItemDto(2L, "product2", 10, BigDecimal.TEN);
         // inventory source, should not trigger rollback logic
         OrderDto orderDto =
-                new OrderDto(1L, 1L, "ROLLBACK", AppConstants.SOURCE, List.of(item1, item2));
+                new OrderDto(orderId, 1L, "ROLLBACK", AppConstants.SOURCE, List.of(item1, item2));
 
         // Define expected changes: [availableQtyChange, reservedItemsChange]
         Map<String, int[]> expectedChanges =
@@ -158,7 +185,7 @@ class InventoryOrderManageServiceImplIT extends AbstractIntegrationTest {
         // Run operation and assert changes
         assertInventoryChanges(
                 orderDto,
-                (order) -> {
+                order -> {
                     inventoryOrderManageService.confirm(order);
                     return order;
                 },
@@ -168,9 +195,10 @@ class InventoryOrderManageServiceImplIT extends AbstractIntegrationTest {
     @Test
     void reserveOrderWithSufficientStock_ShouldReturnAcceptStatus() {
         // Arrange
+        Long orderId = ORDER_ID_GENERATOR.incrementAndGet();
         OrderDto.OrderItemDto item1 = new OrderDto.OrderItemDto(1L, "product1", 10, BigDecimal.TEN);
         OrderDto.OrderItemDto item2 = new OrderDto.OrderItemDto(2L, "product2", 20, BigDecimal.TEN);
-        OrderDto orderDto = new OrderDto(1L, 2L, "NEW", "TEST", List.of(item1, item2));
+        OrderDto orderDto = new OrderDto(orderId, 2L, "NEW", "TEST", List.of(item1, item2));
 
         // Define expected changes: [availableQtyChange, reservedItemsChange]
         Map<String, int[]> expectedChanges =
@@ -187,7 +215,7 @@ class InventoryOrderManageServiceImplIT extends AbstractIntegrationTest {
 
         assertInventoryChanges(
                 orderDto,
-                (order) -> {
+                order -> {
                     OrderDto result = inventoryOrderManageService.reserve(order);
                     resultHolder[0] = result;
                     return result;
@@ -205,11 +233,12 @@ class InventoryOrderManageServiceImplIT extends AbstractIntegrationTest {
     @Test
     void reserveOrderWithInsufficientStock_ShouldReturnRejectStatus() {
         // Arrange
+        Long orderId = ORDER_ID_GENERATOR.incrementAndGet();
         OrderDto.OrderItemDto item1 =
                 new OrderDto.OrderItemDto(
                         1L, "product1", 120, BigDecimal.TEN); // More than available
         OrderDto.OrderItemDto item2 = new OrderDto.OrderItemDto(2L, "product2", 20, BigDecimal.TEN);
-        OrderDto orderDto = new OrderDto(1L, 2L, "NEW", "TEST", List.of(item1, item2));
+        OrderDto orderDto = new OrderDto(orderId, 2L, "NEW", "TEST", List.of(item1, item2));
 
         // Define expected changes: [availableQtyChange, reservedItemsChange]
         Map<String, int[]> expectedChanges =
@@ -223,7 +252,7 @@ class InventoryOrderManageServiceImplIT extends AbstractIntegrationTest {
 
         assertInventoryChanges(
                 orderDto,
-                (order) -> {
+                order -> {
                     OrderDto result = inventoryOrderManageService.reserve(order);
                     resultHolder[0] = result;
                     return result;
@@ -258,9 +287,10 @@ class InventoryOrderManageServiceImplIT extends AbstractIntegrationTest {
         inventoryRepository.save(product1);
 
         // Arrange the order with the parameterized quantity
+        Long orderId = ORDER_ID_GENERATOR.incrementAndGet();
         OrderDto.OrderItemDto item1 =
                 new OrderDto.OrderItemDto(1L, "product1", orderQuantity, BigDecimal.TEN);
-        OrderDto orderDto = new OrderDto(1L, 2L, "NEW", "TEST", List.of(item1));
+        OrderDto orderDto = new OrderDto(orderId, 2L, "NEW", "TEST", List.of(item1));
 
         // Define expected changes based on expected status
         Map<String, int[]> expectedChanges;
@@ -284,7 +314,7 @@ class InventoryOrderManageServiceImplIT extends AbstractIntegrationTest {
 
         assertInventoryChanges(
                 orderDto,
-                (order) -> {
+                order -> {
                     OrderDto result = inventoryOrderManageService.reserve(order);
                     resultHolder[0] = result;
                     return result;
@@ -297,5 +327,295 @@ class InventoryOrderManageServiceImplIT extends AbstractIntegrationTest {
         assertThat(resultOrderDto).isNotNull();
         assertThat(resultOrderDto.status()).isEqualTo(expectedStatus);
         assertThat(resultOrderDto.source()).isEqualTo(AppConstants.SOURCE);
+    }
+
+    @Test
+    void reserveOrderWithDuplicateEvent_ShouldSkipProcessing() {
+        stockOrderListener.reset();
+        Long orderId = ORDER_ID_GENERATOR.incrementAndGet();
+        OrderDto.OrderItemDto item1 = new OrderDto.OrderItemDto(1L, "product1", 10, BigDecimal.TEN);
+        OrderDto orderDto = new OrderDto(orderId, 2L, "NEW", "TEST", List.of(item1));
+
+        OrderDto firstResult = inventoryOrderManageService.reserve(orderDto);
+        assertThat(firstResult.status()).isEqualTo("ACCEPT");
+
+        // Wait for first event
+        await().atMost(Duration.ofSeconds(10))
+                .untilAsserted(() ->
+                        assertThat(
+                                        stockOrderListener.getReceivedOrders().stream()
+                                                .filter(o -> orderId.equals(o.orderId()))
+                                                .toList())
+                                .hasSize(1));
+
+        // Inventory stock should reflect first reservation: available 90, reserved 60
+        InventoryRecord afterFirst =
+                inventoryJOOQRepository.findById(product1.getId()).orElseThrow();
+        assertThat(afterFirst.getQuantity()).isEqualTo(90);
+        assertThat(afterFirst.getReservedItems()).isEqualTo(60);
+
+        // Duplicate reserve event should be skipped and return original orderDto
+        OrderDto secondResult = inventoryOrderManageService.reserve(orderDto);
+        assertThat(secondResult.status()).isEqualTo("NEW");
+
+        // Stock unchanged and publication count remains 1
+        InventoryRecord afterSecond =
+                inventoryJOOQRepository.findById(product1.getId()).orElseThrow();
+        assertThat(afterSecond.getQuantity()).isEqualTo(90);
+        assertThat(afterSecond.getReservedItems()).isEqualTo(60);
+        assertThat(
+                        stockOrderListener.getReceivedOrders().stream()
+                                .filter(o -> orderId.equals(o.orderId()))
+                                .toList())
+                .hasSize(1);
+    }
+
+    @Test
+    void confirmOrderWithDuplicateExternalRollback_ShouldRestoreStockOnlyOnce() {
+        Long orderId = ORDER_ID_GENERATOR.incrementAndGet();
+        OrderDto.OrderItemDto item1 = new OrderDto.OrderItemDto(1L, "product1", 10, BigDecimal.TEN);
+        OrderDto rollbackDto = new OrderDto(orderId, 2L, "ROLLBACK", "PAYMENT", List.of(item1));
+
+        // Initial state from setUp: available 100, reserved 50
+        inventoryOrderManageService.confirm(rollbackDto);
+        InventoryRecord afterFirst =
+                inventoryJOOQRepository.findById(product1.getId()).orElseThrow();
+        assertThat(afterFirst.getQuantity()).isEqualTo(110);
+        assertThat(afterFirst.getReservedItems()).isEqualTo(40);
+
+        // Duplicate external rollback should be skipped
+        inventoryOrderManageService.confirm(rollbackDto);
+        InventoryRecord afterSecond =
+                inventoryJOOQRepository.findById(product1.getId()).orElseThrow();
+        assertThat(afterSecond.getQuantity()).isEqualTo(110);
+        assertThat(afterSecond.getReservedItems()).isEqualTo(40);
+    }
+
+    @Test
+    void rejectedNewOrderRedelivery_KeepsStockUnchangedAndStoresReject() {
+        Long orderId = ORDER_ID_GENERATOR.incrementAndGet();
+        // Request 150 of product1 (available is 100) -> should be rejected
+        OrderDto.OrderItemDto item1 =
+                new OrderDto.OrderItemDto(1L, "product1", 150, BigDecimal.TEN);
+        OrderDto orderDto = new OrderDto(orderId, 2L, "NEW", "ORDER", List.of(item1));
+
+        OrderDto firstResult = inventoryOrderManageService.reserve(orderDto);
+        assertThat(firstResult.status()).isEqualTo("REJECT");
+
+        // Verify result_status in DB is REJECT
+        assertThat(
+                        processedOrderEventRepository.findResultStatusByOrderIdAndReserveEventType(
+                                orderId))
+                .contains("REJECT");
+
+        // Redelivery with blank attempt should skip and keep stock unchanged
+        OrderDto secondResult = inventoryOrderManageService.reserve(orderDto);
+        assertThat(secondResult.status()).isEqualTo("NEW");
+
+        InventoryRecord afterRedelivery =
+                inventoryJOOQRepository.findById(product1.getId()).orElseThrow();
+        assertThat(afterRedelivery.getQuantity()).isEqualTo(100);
+        assertThat(afterRedelivery.getReservedItems()).isEqualTo(50);
+    }
+
+    @Test
+    void reserveOrder_AttemptsAAndB_ReservesStockOnceAndPublishesOneReplyPerAttempt() {
+        stockOrderListener.reset();
+        Long orderId = ORDER_ID_GENERATOR.incrementAndGet();
+        OrderDto.OrderItemDto item1 = new OrderDto.OrderItemDto(1L, "product1", 10, BigDecimal.TEN);
+        OrderDto orderDtoA = new OrderDto(orderId, 2L, "NEW", "ORDER", List.of(item1), "attempt-A");
+        OrderDto orderDtoB = new OrderDto(orderId, 2L, "NEW", "ORDER", List.of(item1), "attempt-B");
+
+        // First attempt A
+        OrderDto resultA = inventoryOrderManageService.reserve(orderDtoA);
+        assertThat(resultA.status()).isEqualTo("ACCEPT");
+        assertThat(resultA.attemptId()).isEqualTo("attempt-A");
+
+        // Second attempt B
+        OrderDto resultB = inventoryOrderManageService.reserve(orderDtoB);
+        assertThat(resultB.status()).isEqualTo("ACCEPT");
+        assertThat(resultB.attemptId()).isEqualTo("attempt-B");
+        assertThat(resultB.source()).isEqualTo(AppConstants.SOURCE);
+
+        // Verify stock reserved only once
+        InventoryRecord stock = inventoryJOOQRepository.findById(product1.getId()).orElseThrow();
+        assertThat(stock.getQuantity()).isEqualTo(90);
+        assertThat(stock.getReservedItems()).isEqualTo(60);
+
+        // Verify events published: one for attempt A, one for attempt B
+        await().atMost(Duration.ofSeconds(10))
+                .untilAsserted(() -> {
+                    List<OrderDto> orders =
+                            stockOrderListener.getReceivedOrders().stream()
+                                    .filter(o -> orderId.equals(o.orderId()))
+                                    .toList();
+                    assertThat(orders).hasSize(2);
+                    assertThat(orders)
+                            .extracting(OrderDto::attemptId)
+                            .containsExactlyInAnyOrder("attempt-A", "attempt-B");
+                    assertThat(orders)
+                            .filteredOn(order -> "attempt-B".equals(order.attemptId()))
+                            .singleElement()
+                            .extracting(OrderDto::status)
+                            .isEqualTo("ACCEPT");
+                });
+    }
+
+    @Test
+    void concurrentTwoThreadDuplicateNewOrder_OnlyOneReservationAndOneReserveMarker()
+            throws Exception {
+        Long orderId = ORDER_ID_GENERATOR.incrementAndGet();
+        OrderDto.OrderItemDto item1 = new OrderDto.OrderItemDto(1L, "product1", 10, BigDecimal.TEN);
+        OrderDto orderDto = new OrderDto(orderId, 2L, "NEW", "ORDER", List.of(item1));
+
+        CountDownLatch startLatch = new CountDownLatch(1);
+        CompletableFuture<OrderDto> future1 =
+                CompletableFuture.supplyAsync(() -> {
+                    try {
+                        startLatch.await();
+                    } catch (InterruptedException ignored) {
+                    }
+                    return inventoryOrderManageService.reserve(orderDto);
+                });
+        CompletableFuture<OrderDto> future2 =
+                CompletableFuture.supplyAsync(() -> {
+                    try {
+                        startLatch.await();
+                    } catch (InterruptedException ignored) {
+                    }
+                    return inventoryOrderManageService.reserve(orderDto);
+                });
+
+        startLatch.countDown();
+        OrderDto r1 = future1.get();
+        OrderDto r2 = future2.get();
+
+        // Exactly one should be ACCEPT, the other should be NEW (duplicate skipped)
+        List<String> statuses = List.of(r1.status(), r2.status());
+        assertThat(statuses).containsExactlyInAnyOrder("ACCEPT", "NEW");
+
+        // Stock reserved only once
+        InventoryRecord stock = inventoryJOOQRepository.findById(product1.getId()).orElseThrow();
+        assertThat(stock.getQuantity()).isEqualTo(90);
+        assertThat(stock.getReservedItems()).isEqualTo(60);
+
+        // Exactly one RESERVE marker
+        assertThat(
+                        processedOrderEventRepository.findResultStatusByOrderIdAndReserveEventType(
+                                orderId))
+                .contains("ACCEPT");
+    }
+
+    @Test
+    void failureAfterClaim_RollsBackMarkerAndAllowsSuccessfulLaterDelivery() {
+        Long orderId = ORDER_ID_GENERATOR.incrementAndGet();
+        OrderDto.OrderItemDto item1 = new OrderDto.OrderItemDto(1L, "product1", 10, BigDecimal.TEN);
+        OrderDto orderDto =
+                new OrderDto(orderId, 2L, "NEW", "ORDER", List.of(item1), "attempt-fail");
+
+        // Fail inside the reservation transaction, after stock and event markers are saved.
+        // An outer transaction failure cannot roll back a committed REQUIRES_NEW attempt.
+        ApplicationEventPublisher failingPublisher = mock(ApplicationEventPublisher.class);
+        doThrow(new RuntimeException("Simulated failure"))
+                .when(failingPublisher)
+                .publishEvent(any(InventoryProcessedEvent.class));
+        InventoryOrderManageServiceImpl failingService =
+                new InventoryOrderManageServiceImpl(
+                        inventoryRepository,
+                        inventoryJOOQRepository,
+                        inventoryMapper,
+                        retryHandler,
+                        processedOrderEventRepository,
+                        meterRegistry,
+                        failingPublisher);
+
+        assertThatThrownBy(() -> failingService.reserve(orderDto))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("Simulated failure");
+
+        // The RESERVE marker should have been rolled back
+        assertThat(
+                        processedOrderEventRepository.findResultStatusByOrderIdAndReserveEventType(
+                                orderId))
+                .isEmpty();
+
+        assertThat(
+                        processedOrderEventRepository.existsById(
+                                new ProcessedOrderEventId(orderId, "RESERVE")))
+                .isFalse();
+        assertThat(
+                        processedOrderEventRepository.existsById(
+                                new ProcessedOrderEventId(orderId, "RESERVE_REPLY:attempt-fail")))
+                .isFalse();
+        InventoryRecord afterFailure =
+                inventoryJOOQRepository.findById(product1.getId()).orElseThrow();
+        assertThat(afterFailure.getQuantity()).isEqualTo(100);
+        assertThat(afterFailure.getReservedItems()).isEqualTo(50);
+
+        // Subsequent delivery succeeds and reserves stock
+        OrderDto secondResult = inventoryOrderManageService.reserve(orderDto);
+        assertThat(secondResult.status()).isEqualTo("ACCEPT");
+
+        InventoryRecord stock = inventoryJOOQRepository.findById(product1.getId()).orElseThrow();
+        assertThat(stock.getQuantity()).isEqualTo(90);
+        assertThat(stock.getReservedItems()).isEqualTo(60);
+    }
+
+    @Test
+    void confirmOrderWithDuplicateEvent_ShouldSkipProcessing() {
+        Long orderId = ORDER_ID_GENERATOR.incrementAndGet();
+        OrderDto.OrderItemDto item1 = new OrderDto.OrderItemDto(1L, "product1", 10, BigDecimal.TEN);
+        OrderDto orderDto = new OrderDto(orderId, 2L, "CONFIRMED", "TEST", List.of(item1));
+
+        inventoryOrderManageService.confirm(orderDto);
+        InventoryRecord afterFirst =
+                inventoryJOOQRepository.findById(product1.getId()).orElseThrow();
+        assertThat(afterFirst.getReservedItems()).isEqualTo(40);
+
+        // Duplicate confirm should be skipped and not deduct reserved items again
+        inventoryOrderManageService.confirm(orderDto);
+        InventoryRecord afterSecond =
+                inventoryJOOQRepository.findById(product1.getId()).orElseThrow();
+        assertThat(afterSecond.getReservedItems()).isEqualTo(40);
+    }
+
+    @Test
+    void reserveOrderForSoftDeletedProduct_ShouldRejectReservation() {
+        // Soft delete product1
+        product1.markDeleted();
+        inventoryRepository.save(product1);
+
+        Long orderId = ORDER_ID_GENERATOR.incrementAndGet();
+        OrderDto.OrderItemDto item = new OrderDto.OrderItemDto(1L, "product1", 10, BigDecimal.TEN);
+        OrderDto orderDto = new OrderDto(orderId, 2L, "NEW", "TEST", List.of(item));
+
+        OrderDto result = inventoryOrderManageService.reserve(orderDto);
+        assertThat(result.status()).isEqualTo("REJECT");
+    }
+
+    @Test
+    void confirmAndRollbackForSoftDeletedProduct_ShouldComplete() {
+        // Soft delete product1
+        product1.markDeleted();
+        inventoryRepository.save(product1);
+
+        Long orderId = ORDER_ID_GENERATOR.incrementAndGet();
+        OrderDto.OrderItemDto item = new OrderDto.OrderItemDto(1L, "product1", 10, BigDecimal.TEN);
+        OrderDto confirmDto = new OrderDto(orderId, 2L, "CONFIRMED", "TEST", List.of(item));
+
+        // Unfiltered confirm should successfully deduct reserved items on soft-deleted row
+        inventoryOrderManageService.confirm(confirmDto);
+        InventoryRecord afterConfirm =
+                inventoryJOOQRepository.findById(product1.getId()).orElseThrow();
+        assertThat(afterConfirm.getReservedItems()).isEqualTo(40);
+
+        Long rollbackOrderId = ORDER_ID_GENERATOR.incrementAndGet();
+        OrderDto rollbackDto = new OrderDto(rollbackOrderId, 2L, "ROLLBACK", "TEST", List.of(item));
+        // Unfiltered rollback should successfully release reserved items
+        inventoryOrderManageService.confirm(rollbackDto);
+        InventoryRecord afterRollback =
+                inventoryJOOQRepository.findById(product1.getId()).orElseThrow();
+        assertThat(afterRollback.getQuantity()).isEqualTo(110);
+        assertThat(afterRollback.getReservedItems()).isEqualTo(30);
     }
 }

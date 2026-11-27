@@ -6,10 +6,10 @@
 
 package com.example.orderservice.services;
 
-import com.example.orderservice.config.logging.Loggable;
+import com.example.common.dto.OrderDto;
+import com.example.common.logging.Loggable;
 import com.example.orderservice.entities.OrderStatus;
 import com.example.orderservice.exception.OrderNotFoundException;
-import com.example.orderservice.model.dtos.OrderDto;
 import com.example.orderservice.repositories.OrderRepository;
 import com.example.orderservice.utils.AppConstants;
 import io.micrometer.core.instrument.Counter;
@@ -61,20 +61,20 @@ public class OrderManageService {
         }
         log.info("Setting Status for order :{}", orderPayment);
         OrderDto orderDto = getOrderDto(orderPayment, orderStock);
+        // Uses unfiltered updateOrderStatusAndSourceById so in-flight orders complete even if
+        // soft-deleted
         int rows =
                 this.orderRepository.updateOrderStatusAndSourceById(
                         orderDto.orderId(),
                         OrderStatus.valueOf(orderDto.status()),
                         orderDto.source());
         if (rows == 0) {
+            // Unfiltered findById to verify terminal state for retained orders
             var persisted =
                     orderRepository
                             .findById(orderDto.orderId())
                             .orElseThrow(() -> new OrderNotFoundException(orderDto.orderId()));
-            if (switch (persisted.getStatus()) {
-                case CONFIRMED, REJECTED, ROLLBACK, FAILED -> true;
-                default -> false;
-            }) {
+            if (persisted.isTerminal()) {
                 return null;
             }
             return orderDto.withStatusAndSource(

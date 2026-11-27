@@ -6,25 +6,23 @@
 
 package com.example.catalogservice.services;
 
-import com.example.catalogservice.config.logging.Loggable;
 import com.example.catalogservice.entities.Product;
 import com.example.catalogservice.exception.ProductAlreadyExistsException;
 import com.example.catalogservice.exception.ProductNotFoundException;
 import com.example.catalogservice.mapper.ProductMapper;
 import com.example.catalogservice.model.request.ProductRequest;
-import com.example.catalogservice.model.response.InventoryResponse;
-import com.example.catalogservice.model.response.PagedResult;
 import com.example.catalogservice.model.response.ProductResponse;
+import com.example.catalogservice.repositories.ProductCacheGenerationRepository;
 import com.example.catalogservice.repositories.ProductRepository;
+import com.example.common.dto.PagedResult;
+import com.example.common.logging.Loggable;
 import io.hypersistence.tsid.TSID;
 import io.micrometer.observation.annotation.Observed;
 import java.math.BigDecimal;
-import java.security.SecureRandom;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
@@ -50,39 +48,40 @@ public class ProductService {
 
     private static final Logger log = LoggerFactory.getLogger(ProductService.class);
     private static final Duration CACHE_EXPIRY = Duration.ofMinutes(5);
-    private static final SecureRandom RAND = new SecureRandom();
-    public static final int MAX_GENERATION_BATCH_SIZE = 10_000;
-    private static final int DEFAULT_GENERATION_BATCH_SIZE = 101;
 
     private final ProductRepository productRepository;
     private final ProductMapper productMapper;
-    private final InventoryServiceProxy inventoryServiceProxy;
     private final OutboxService outboxService;
     private final ReactiveRedisOperations<String, Object> redisOps;
+    private final ProductAvailabilityEnricher productAvailabilityEnricher;
 
     private final ProductService self;
     private final TSID.Factory tsidFactory;
+    private final ProductCacheGenerationRepository productCacheGenerationRepository;
 
     /**
      * Creates the product service with shared caching and transactional product creation.
      *
-     * @param self the Spring proxy used to apply transactions when creating a product
+     * @param self the Spring proxy used for product saves and creation, or null to use this
+     *     instance without proxy interception
      */
     public ProductService(
             ProductRepository productRepository,
             ProductMapper productMapper,
-            InventoryServiceProxy inventoryServiceProxy,
             OutboxService outboxService,
             ReactiveRedisOperations<String, Object> redisOps,
+            ProductAvailabilityEnricher productAvailabilityEnricher,
             @Lazy ProductService self,
-            TSID.Factory tsidFactory) {
+            TSID.Factory tsidFactory,
+            ProductCacheGenerationRepository productCacheGenerationRepository) {
         this.productRepository = productRepository;
         this.productMapper = productMapper;
-        this.inventoryServiceProxy = inventoryServiceProxy;
         this.outboxService = outboxService;
         this.redisOps = redisOps;
-        this.self = self;
+        this.productAvailabilityEnricher = productAvailabilityEnricher;
+        this.self = self != null ? self : this;
         this.tsidFactory = tsidFactory;
+        this.productCacheGenerationRepository = productCacheGenerationRepository;
     }
 
     /**
@@ -114,9 +113,9 @@ public class ProductService {
     }
 
     /**
-     * Loads a page and enriches it with inventory availability without consulting Redis. Missing
-     * inventory entries are treated as out of stock. Database and unhandled inventory errors
-     * propagate through the returned Mono.
+     * Loads a page of active products and enriches it with inventory availability without
+     * consulting Redis. Missing inventory entries are treated as out of stock. Database and
+     * unhandled inventory errors propagate through the returned Mono.
      *
      * @param pageNo the zero-based page index
      * @return the enriched page, or an empty page when no products are returned
@@ -128,54 +127,33 @@ public class ProductService {
         Pageable pageable = createPageable(pageNo, pageSize, sortBy, sortDir);
 
         return productRepository
-                .count()
-                .flatMap(
-                        count -> {
-                            if (count == 0) {
-                                return Mono.just(
-                                        new PagedResult<>(
-                                                new PageImpl<>(
-                                                        Collections.emptyList(), pageable, 0)));
-                            }
+                .countByDeletedFalse()
+                .flatMap(count -> {
+                    if (count == 0) {
+                        return Mono.just(
+                                new PagedResult<>(
+                                        new PageImpl<>(Collections.emptyList(), pageable, 0)));
+                    }
 
-                            return productRepository
-                                    .findAllBy(pageable)
-                                    .collectList()
-                                    .flatMap(
-                                            products -> {
-                                                Flux<ProductResponse> productResponseFlux =
-                                                        Flux.fromIterable(products)
-                                                                .map(
-                                                                        productMapper
-                                                                                ::toProductResponse);
+                    return productRepository
+                            .findAllByDeletedFalse(pageable)
+                            .collectList()
+                            .flatMap(products -> {
+                                Flux<ProductResponse> productResponseFlux =
+                                        Flux.fromIterable(products)
+                                                .map(productMapper::toProductResponse);
 
-                                                return enrichWithAvailability(
-                                                        productResponseFlux, pageable, count);
-                                            });
-                        });
-    }
-
-    private Flux<ProductResponse> updateProductAvailability(
-            List<ProductResponse> productResponses, Map<String, Integer> inventoriesMap) {
-        return Flux.fromIterable(productResponses)
-                .map(
-                        productResponse -> {
-                            int availableQuantity =
-                                    inventoriesMap.getOrDefault(productResponse.productCode(), 0);
-                            return productResponse.withInStock(availableQuantity > 0);
-                        });
-    }
-
-    private Flux<InventoryResponse> getInventoryByProductCodes(List<String> productCodeList) {
-        return inventoryServiceProxy.getInventoryByProductCodes(productCodeList);
+                                return enrichWithAvailability(productResponseFlux, pageable, count);
+                            });
+                });
     }
 
     /**
      * Finds a product by ID, caching its details and inventory availability for five minutes. Redis
      * failures are tolerated; database and unhandled inventory errors propagate.
      *
-     * @return the product, or an error with ProductNotFoundException if absent on a cache miss or
-     *     IllegalStateException if the shared cache generation is missing
+     * @return the product, or an error with ProductNotFoundException if absent or deleted on a
+     *     cache miss or IllegalStateException if the shared cache generation is missing
      */
     @Observed(name = "product.findProductById", contextualName = "findProductById")
     public Mono<ProductResponse> findProductById(Long id) {
@@ -184,14 +162,10 @@ public class ProductService {
                 cacheKey,
                 () ->
                         productRepository
-                                .findById(id)
+                                .findByIdAndDeletedFalse(id)
                                 .switchIfEmpty(Mono.error(new ProductNotFoundException(id)))
                                 .map(productMapper::toProductResponse)
                                 .flatMap(this::fetchInventoryAndUpdateProductResponse));
-    }
-
-    private Mono<InventoryResponse> getInventoryByProductCode(String code) {
-        return inventoryServiceProxy.getInventoryByProductCode(code);
     }
 
     /**
@@ -200,8 +174,8 @@ public class ProductService {
      *
      * @param fetchInStock whether to refresh availability from inventory, including on cache hits;
      *     otherwise availability remains false
-     * @return the product, or an error with ProductNotFoundException if absent on a cache miss or
-     *     IllegalStateException if the shared cache generation is missing
+     * @return the product, or an error with ProductNotFoundException if absent or deleted on a
+     *     cache miss or IllegalStateException if the shared cache generation is missing
      */
     @Observed(name = "product.findByCode", contextualName = "findByProductCode")
     public Mono<ProductResponse> findProductByProductCode(
@@ -213,7 +187,7 @@ public class ProductService {
                         cacheKey,
                         () ->
                                 productRepository
-                                        .findByProductCodeAllIgnoreCase(productCode)
+                                        .findByProductCodeAllIgnoreCaseAndDeletedFalse(productCode)
                                         .map(productMapper::toProductResponse)
                                         .switchIfEmpty(
                                                 Mono.error(
@@ -226,23 +200,24 @@ public class ProductService {
         return productResponseMono;
     }
 
+    /**
+     * Refreshes stock availability, treating an empty inventory response as out of stock. Unhandled
+     * inventory errors propagate through the returned Mono.
+     */
     private Mono<ProductResponse> fetchInventoryAndUpdateProductResponse(
             ProductResponse productResponse) {
-        return getInventoryByProductCode(productResponse.productCode())
-                .map(
-                        inventoryResponse ->
-                                productResponse.withInStock(
-                                        inventoryResponse.availableQuantity() > 0));
+        return productAvailabilityEnricher.enrichWithAvailability(productResponse);
     }
 
     /**
-     * Returns an existing product with the same case-insensitive code, or creates it with a product
-     * creation outbox event. Invalidates product caches before emitting either result. Redis
-     * deletion failures are suppressed; database, outbox serialization, and cache-generation errors
-     * propagate.
+     * Returns an active product with the same case-insensitive code, or restores a retained product
+     * or creates one with a product creation outbox event. Invalidates product caches before
+     * emitting the result. Redis deletion failures are suppressed; database, outbox serialization,
+     * and cache-generation errors propagate.
      *
-     * @return the existing or created product; a duplicate-key race is recovered by looking up the
-     *     existing product, or emits ProductAlreadyExistsException if that lookup is empty
+     * @return the existing, restored, or created product; a duplicate-key race is recovered by
+     *     looking up the existing product, or emits ProductAlreadyExistsException if that lookup is
+     *     empty
      */
     // saves product to db and sends message that new product is available for inventory
     @Transactional
@@ -250,7 +225,7 @@ public class ProductService {
     public Mono<ProductResponse> saveProduct(ProductRequest productRequest) {
         // First, check if product already exists - idempotent approach
         return productRepository
-                .findByProductCodeAllIgnoreCase(productRequest.productCode())
+                .findByProductCodeAllIgnoreCaseAndDeletedFalse(productRequest.productCode())
                 .map(productMapper::toProductResponse)
                 .switchIfEmpty(Mono.defer(() -> self.createAndSaveProduct(productRequest)))
                 // Catch DuplicateKeyException from unique constraint violation
@@ -263,7 +238,8 @@ public class ProductService {
                             // Recovery mechanism: fetch the existing product that was concurrently
                             // saved
                             return productRepository
-                                    .findByProductCodeAllIgnoreCase(productRequest.productCode())
+                                    .findByProductCodeAllIgnoreCaseAndDeletedFalse(
+                                            productRequest.productCode())
                                     .map(productMapper::toProductResponse)
                                     .switchIfEmpty(
                                             // This should never happen, but just in case
@@ -274,65 +250,106 @@ public class ProductService {
                 .delayUntil(p -> evictProductCache(p.id(), p.productCode()));
     }
 
+    /**
+     * Restores a deleted product with the same case-insensitive code using the request details,
+     * preserving its ID, or creates a new product. Saves a PRODUCT_CREATED outbox event in either
+     * case. Database, optimistic locking, and outbox serialization errors propagate through the
+     * returned Mono.
+     *
+     * @return the saved product response
+     */
     @Transactional
     public Mono<ProductResponse> createAndSaveProduct(ProductRequest productRequest) {
-        return Mono.fromSupplier(
-                        () -> {
+        return productRepository
+                .findByProductCodeAllIgnoreCaseAndDeletedTrue(productRequest.productCode())
+                .map(product -> {
+                    String storedProductCode = product.getProductCode();
+                    productMapper.mapProductWithRequest(productRequest, product);
+                    product.setProductCode(storedProductCode);
+                    return product.setDeleted(false);
+                })
+                .switchIfEmpty(
+                        Mono.fromSupplier(() -> {
                             Product product = productMapper.toEntity(productRequest);
                             product.setId(tsidFactory.generate().toLong());
                             product.setNew(true);
                             return product;
-                        })
+                        }))
                 .flatMap(productRepository::save)
-                .flatMap(
-                        savedProduct ->
-                                outboxService
-                                        .createOutboxEvent(
-                                                "PRODUCT",
-                                                savedProduct.getProductCode(),
-                                                "PRODUCT_CREATED",
-                                                savedProduct)
-                                        .thenReturn(savedProduct))
+                .flatMap(savedProduct ->
+                        outboxService
+                                .createOutboxEvent(
+                                        "PRODUCT",
+                                        savedProduct.getProductCode(),
+                                        "PRODUCT_CREATED",
+                                        productMapper.toProductDto(savedProduct))
+                                .thenReturn(savedProduct))
                 .map(productMapper::toProductResponse);
     }
 
     /**
-     * Deletes a product, records its deletion in the outbox, and invalidates product caches. Redis
-     * deletion failures are suppressed; database, outbox serialization, and cache-generation errors
-     * propagate.
+     * Soft deletes an active product, records its deletion in the outbox, and invalidates caches.
+     * Redis deletion failures are suppressed; database, outbox serialization, and cache-generation
+     * errors propagate.
      *
      * @return completion after deletion and invalidation, or ProductNotFoundException as an error
-     *     if the product does not exist
+     *     if the product is absent or already deleted
      */
     @Transactional
     @Observed(name = "product.deleteById", contextualName = "deleteProductById")
     public Mono<Void> deleteProductById(Long id) {
         return productRepository
-                .findById(id)
+                .findByIdAndDeletedFalse(id)
                 .switchIfEmpty(Mono.error(new ProductNotFoundException(id)))
-                .flatMap(
-                        product ->
-                                productRepository
-                                        .deleteById(id)
-                                        .then(
-                                                outboxService.createOutboxEvent(
-                                                        "PRODUCT",
-                                                        product.getProductCode(),
-                                                        "PRODUCT_DELETED",
-                                                        product))
-                                        .then(evictProductCache(id, product.getProductCode())));
+                .flatMap(product -> {
+                    product.setDeleted(true);
+                    return productRepository
+                            .save(product)
+                            .flatMap(savedProduct ->
+                                    outboxService
+                                            .createOutboxEvent(
+                                                    "PRODUCT",
+                                                    savedProduct.getProductCode(),
+                                                    "PRODUCT_DELETED",
+                                                    productMapper.toProductDto(savedProduct))
+                                            .then(
+                                                    evictProductCache(
+                                                            id, savedProduct.getProductCode())));
+                });
     }
 
+    /**
+     * Compares the distinct count of active matching codes with the input list size. Matching is
+     * case-insensitive; repeated codes can make the result false, and an empty list yields true.
+     * Database errors propagate through the returned Mono.
+     */
     public Mono<Boolean> productExistsByProductCodes(List<String> productCodes) {
         log.info("checking if products Exists :{}", productCodes);
         return productRepository
-                .countDistinctByProductCodeAllIgnoreCaseIn(productCodes)
+                .countDistinctByProductCodeAllIgnoreCaseInAndDeletedFalse(productCodes)
                 .map(count -> count == productCodes.size());
     }
 
     @Observed(name = "product.findById", contextualName = "findById")
     public Mono<ProductResponse> findByIdWithMapping(Long id) {
         return findById(id).map(productMapper::toProductResponse);
+    }
+
+    /**
+     * Updates an active product, records an update outbox event, and invalidates product caches.
+     * Redis deletion failures are suppressed; database, outbox serialization, cache-generation, and
+     * optimistic locking errors propagate through the returned Mono.
+     *
+     * @param id the product ID
+     * @param productRequest the updated product details
+     * @return the updated product, or ProductNotFoundException as an error if absent or deleted
+     */
+    @Transactional
+    public Mono<ProductResponse> updateProduct(Long id, ProductRequest productRequest) {
+        return productRepository
+                .findByIdAndDeletedFalse(id)
+                .switchIfEmpty(Mono.error(new ProductNotFoundException(id)))
+                .flatMap(product -> updateProduct(productRequest, product));
     }
 
     /**
@@ -357,80 +374,53 @@ public class ProductService {
         // Save the updated post object
         return productRepository
                 .save(product)
-                .flatMap(
-                        savedProduct ->
-                                outboxService
-                                        .createOutboxEvent(
-                                                "PRODUCT",
-                                                savedProduct.getProductCode(),
-                                                "PRODUCT_UPDATED",
-                                                savedProduct)
-                                        .thenReturn(savedProduct))
+                .flatMap(savedProduct ->
+                        outboxService
+                                .createOutboxEvent(
+                                        "PRODUCT",
+                                        savedProduct.getProductCode(),
+                                        "PRODUCT_UPDATED",
+                                        productMapper.toProductDto(savedProduct))
+                                .thenReturn(savedProduct))
                 .map(productMapper::toProductResponse)
                 .delayUntil(p -> evictProductCache(p.id(), previousProductCode, p.productCode()));
     }
 
+    /**
+     * Finds an active product by ID, emitting nothing if absent or deleted. Database errors
+     * propagate through the returned Mono.
+     */
     public Mono<Product> findById(Long id) {
-        return this.productRepository.findById(id);
+        return this.productRepository.findByIdAndDeletedFalse(id);
     }
 
     /**
-     * Creates sample products with whole-unit prices from 1.00 through 100.00, reusing products
-     * with existing codes. New products create outbox events, and product caches are invalidated.
-     * Save failures propagate through the returned Mono; Redis deletion failures are suppressed.
+     * Returns a page of active products whose name or description contains the term, ignoring case,
+     * enriched with inventory availability. Missing inventory is out of stock. Database and
+     * unhandled inventory errors propagate through the returned Mono.
      *
-     * @param idempotencyKey included in each product code with its zero-based batch index;
-     *     repeating a key reuses matching codes
-     * @param batchSize number of products, from 1 through 10,000, or null for 101
-     * @return true after all saves complete
-     * @throws IllegalArgumentException if a supplied batch size is outside the allowed range
+     * @param pageNo zero-based page index
+     * @param pageSize positive maximum number of products to return
+     * @param sortBy product property to sort by
+     * @param sortDir ascending for "asc" (case-insensitive), descending otherwise
+     * @return the matching page; totals use the fetched page size rather than all matches
+     * @throws IllegalArgumentException if the page index is negative, the page size is not
+     *     positive, or the sort property is empty
      */
-    @Transactional
-    public Mono<Boolean> generateProducts(String idempotencyKey, Integer batchSize) {
-        validateBatchSize(batchSize);
-        int resolvedBatchSize = batchSize != null ? batchSize : DEFAULT_GENERATION_BATCH_SIZE;
-
-        return Flux.range(0, resolvedBatchSize)
-                .flatMap(
-                        i ->
-                                Mono.just(RAND.nextInt(100) + 1)
-                                        .map(
-                                                randomPrice ->
-                                                        new ProductRequest(
-                                                                "ProductCode_"
-                                                                        + idempotencyKey
-                                                                        + "_"
-                                                                        + i,
-                                                                "Gen Product " + i,
-                                                                "Gen Prod Description " + i,
-                                                                null,
-                                                                BigDecimal.valueOf(randomPrice)
-                                                                        .setScale(2))))
-                .flatMap(this::saveProduct)
-                .then(Mono.just(Boolean.TRUE));
-    }
-
-    private static void validateBatchSize(Integer batchSize) {
-        if (batchSize != null && (batchSize < 1 || batchSize > MAX_GENERATION_BATCH_SIZE)) {
-            throw new IllegalArgumentException(
-                    "batchSize must be between 1 and " + MAX_GENERATION_BATCH_SIZE);
-        }
-    }
-
     public Mono<PagedResult<ProductResponse>> searchProductsByTerm(
             String term, int pageNo, int pageSize, String sortBy, String sortDir) {
         Pageable pageable = createPageable(pageNo, pageSize, sortBy, sortDir);
 
         Flux<Product> productFlux =
                 productRepository
-                        .findByProductNameContainingIgnoreCaseOrDescriptionContainingIgnoreCase(
+                        .findByProductNameContainingIgnoreCaseAndDeletedFalseOrDescriptionContainingIgnoreCaseAndDeletedFalse(
                                 term, term, pageable);
 
         return processSearchResults(productFlux, pageable);
     }
 
     /**
-     * Returns a product page within the inclusive price range, enriched with inventory
+     * Returns an active product page within the inclusive price range, enriched with inventory
      * availability. Missing inventory entries, including those omitted by the inventory fallback,
      * are out of stock. Database and unhandled inventory errors propagate through the returned
      * Mono.
@@ -456,7 +446,7 @@ public class ProductService {
         Pageable pageable = createPageable(pageNo, pageSize, sortBy, sortDir);
 
         Flux<Product> productFlux =
-                productRepository.findByPriceBetween(minPrice, maxPrice, pageable);
+                productRepository.findByPriceBetweenAndDeletedFalse(minPrice, maxPrice, pageable);
         return processSearchResults(productFlux, pageable);
     }
 
@@ -470,9 +460,10 @@ public class ProductService {
 
     /**
      * Returns a page of case-insensitive name matches, or description matches within the inclusive
-     * price range, enriched with inventory availability. Name matches are not price-filtered.
-     * Missing inventory entries, including those omitted by the inventory fallback, are out of
-     * stock. Database and unhandled inventory errors propagate through the returned Mono.
+     * price range, enriched with inventory availability. Deleted products are excluded from both
+     * branches. Name matches are not price-filtered. Missing inventory entries, including those
+     * omitted by the inventory fallback, are out of stock. Database and unhandled inventory errors
+     * propagate through the returned Mono.
      *
      * @param term text to match in the product name or description
      * @param minPrice inclusive lower unit-price bound
@@ -498,7 +489,7 @@ public class ProductService {
 
         Flux<Product> productFlux =
                 productRepository
-                        .findByProductNameContainingIgnoreCaseOrDescriptionContainingIgnoreCaseAndPriceBetween(
+                        .findByProductNameContainingIgnoreCaseAndDeletedFalseOrDescriptionContainingIgnoreCaseAndPriceBetweenAndDeletedFalse(
                                 term, term, minPrice, maxPrice, pageable);
 
         return processSearchResults(productFlux, pageable);
@@ -508,22 +499,19 @@ public class ProductService {
             Flux<Product> productFlux, Pageable pageable) {
         return productFlux
                 .collectList()
-                .flatMap(
-                        products -> {
-                            if (products.isEmpty()) {
-                                return Mono.just(
-                                        new PagedResult<>(
-                                                new PageImpl<>(
-                                                        Collections.emptyList(), pageable, 0)));
-                            }
+                .flatMap(products -> {
+                    if (products.isEmpty()) {
+                        return Mono.just(
+                                new PagedResult<>(
+                                        new PageImpl<>(Collections.emptyList(), pageable, 0)));
+                    }
 
-                            Flux<ProductResponse> productResponseFlux =
-                                    Flux.fromIterable(products)
-                                            .map(productMapper::toProductResponse);
+                    Flux<ProductResponse> productResponseFlux =
+                            Flux.fromIterable(products).map(productMapper::toProductResponse);
 
-                            return enrichWithAvailability(
-                                    productResponseFlux, pageable, (long) products.size());
-                        });
+                    return enrichWithAvailability(
+                            productResponseFlux, pageable, (long) products.size());
+                });
     }
 
     /**
@@ -539,48 +527,8 @@ public class ProductService {
      */
     private Mono<PagedResult<ProductResponse>> enrichWithAvailability(
             Flux<ProductResponse> productResponseFlux, Pageable pageable, Long totalCount) {
-        return productResponseFlux
-                .collectList()
-                .flatMap(
-                        productResponseList -> {
-                            if (productResponseList.isEmpty()) {
-                                return Mono.just(
-                                        new PagedResult<>(
-                                                new PageImpl<>(
-                                                        Collections.emptyList(), pageable, 0)));
-                            }
-
-                            Flux<String> productCodeFlux =
-                                    Flux.fromIterable(productResponseList)
-                                            .map(ProductResponse::productCode);
-
-                            return productCodeFlux
-                                    .collectList()
-                                    .flatMap(
-                                            productCodeList ->
-                                                    getInventoryByProductCodes(productCodeList)
-                                                            .collectMap(
-                                                                    InventoryResponse::productCode,
-                                                                    InventoryResponse
-                                                                            ::availableQuantity)
-                                                            .flatMap(
-                                                                    inventoriesMap ->
-                                                                            updateProductAvailability(
-                                                                                            productResponseList,
-                                                                                            inventoriesMap)
-                                                                                    .collectList()
-                                                                                    .map(
-                                                                                            updatedProducts ->
-                                                                                                    new PagedResult<>(
-                                                                                                            new PageImpl<>(
-                                                                                                                    updatedProducts,
-                                                                                                                    pageable,
-                                                                                                                    totalCount
-                                                                                                                                    != null
-                                                                                                                            ? totalCount
-                                                                                                                            : productResponseList
-                                                                                                                                    .size())))));
-                        });
+        return productAvailabilityEnricher.enrichWithAvailability(
+                productResponseFlux, pageable, totalCount);
     }
 
     /** Builds a generation-free cache key using locale-independent lowercase product codes. */
@@ -595,7 +543,7 @@ public class ProductService {
      *     errors propagate
      */
     private Mono<String> cacheGeneration() {
-        return productRepository
+        return productCacheGenerationRepository
                 .findCacheGeneration()
                 .switchIfEmpty(
                         Mono.error(new IllegalStateException("Missing product cache generation")));
@@ -611,23 +559,17 @@ public class ProductService {
      * @return the cached value or the source result
      */
     private <T> Mono<T> cached(String key, Supplier<Mono<T>> source) {
-        return Mono.defer(
-                () ->
-                        cacheGeneration()
-                                .flatMap(
-                                        generation -> {
-                                            String cacheKey = key + ":" + generation;
-                                            return this.<T>readCache(cacheKey)
-                                                    .switchIfEmpty(
-                                                            Mono.defer(source)
-                                                                    .flatMap(
-                                                                            result ->
-                                                                                    writeCache(
-                                                                                                    cacheKey,
-                                                                                                    result)
-                                                                                            .thenReturn(
-                                                                                                    result)));
-                                        }));
+        return Mono.defer(() ->
+                cacheGeneration()
+                        .flatMap(generation -> {
+                            String cacheKey = key + ":" + generation;
+                            return this.<T>readCache(cacheKey)
+                                    .switchIfEmpty(
+                                            Mono.defer(source)
+                                                    .flatMap(result ->
+                                                            writeCache(cacheKey, result)
+                                                                    .thenReturn(result)));
+                        }));
     }
 
     /**
@@ -639,11 +581,10 @@ public class ProductService {
     private <T> Mono<T> readCache(String cacheKey) {
         return Mono.defer(() -> redisOps.opsForValue().get(cacheKey))
                 .map(value -> (T) value)
-                .onErrorResume(
-                        ex -> {
-                            log.warn("Product cache read failed for {}", cacheKey, ex);
-                            return Mono.empty();
-                        });
+                .onErrorResume(ex -> {
+                    log.warn("Product cache read failed for {}", cacheKey, ex);
+                    return Mono.empty();
+                });
     }
 
     /**
@@ -652,11 +593,10 @@ public class ProductService {
      */
     private Mono<Void> writeCache(String cacheKey, Object result) {
         return Mono.defer(() -> redisOps.opsForValue().set(cacheKey, result, CACHE_EXPIRY))
-                .onErrorResume(
-                        ex -> {
-                            log.warn("Product cache write failed for {}", cacheKey, ex);
-                            return Mono.empty();
-                        })
+                .onErrorResume(ex -> {
+                    log.warn("Product cache write failed for {}", cacheKey, ex);
+                    return Mono.empty();
+                })
                 .then();
     }
 
@@ -673,24 +613,17 @@ public class ProductService {
     private Mono<Void> evictProductCache(Long id, String... productCodes) {
         // Rotate in the product transaction so every node stops using the old entries even
         // when Redis deletion fails. UUIDs also prevent reuse of a rolled-back generation.
-        return Mono.defer(
-                () ->
-                        cacheGeneration()
-                                .flatMap(
-                                        generation ->
-                                                productRepository
-                                                        .updateCacheGeneration(
-                                                                UUID.randomUUID().toString())
-                                                        .filter(updated -> updated == 1)
-                                                        .switchIfEmpty(
-                                                                Mono.error(
-                                                                        new IllegalStateException(
-                                                                                "Missing product cache generation")))
-                                                        .then(
-                                                                deleteCacheEntries(
-                                                                        id,
-                                                                        productCodes,
-                                                                        generation))));
+        return Mono.defer(() ->
+                cacheGeneration()
+                        .flatMap(generation ->
+                                productCacheGenerationRepository
+                                        .updateCacheGeneration(UUID.randomUUID().toString())
+                                        .filter(updated -> updated == 1)
+                                        .switchIfEmpty(
+                                                Mono.error(
+                                                        new IllegalStateException(
+                                                                "Missing product cache generation")))
+                                        .then(deleteCacheEntries(id, productCodes, generation))));
     }
 
     /**
@@ -709,13 +642,10 @@ public class ProductService {
                         .distinct()
                         .toArray(String[]::new);
         return Mono.defer(() -> redisOps.delete(keys))
-                .onErrorResume(
-                        ex -> {
-                            log.warn(
-                                    "Product cache eviction failed; old generation is no longer used",
-                                    ex);
-                            return Mono.empty();
-                        })
+                .onErrorResume(ex -> {
+                    log.warn("Product cache eviction failed; old generation is no longer used", ex);
+                    return Mono.empty();
+                })
                 .then();
     }
 }

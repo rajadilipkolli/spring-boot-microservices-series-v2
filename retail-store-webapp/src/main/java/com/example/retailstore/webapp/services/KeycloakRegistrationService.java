@@ -6,16 +6,19 @@ import com.example.retailstore.webapp.exception.UserAlreadyExistsException;
 import com.example.retailstore.webapp.model.request.RegistrationRequest;
 import jakarta.ws.rs.core.Response;
 import java.util.List;
-import org.jspecify.annotations.NonNull;
 import org.keycloak.admin.client.CreatedResponseUtil;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.resource.RealmResource;
 import org.keycloak.representations.idm.CredentialRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 @Service
-public class KeycloakRegistrationService {
+public class KeycloakRegistrationService implements IdentityProviderPort {
+
+    private static final Logger log = LoggerFactory.getLogger(KeycloakRegistrationService.class);
 
     private final Keycloak keycloakClient;
     private final String realm;
@@ -23,11 +26,11 @@ public class KeycloakRegistrationService {
     /**
      * Creates a registration service using an existing admin client.
      *
-     * @param props configuration containing the target registration realm
+     * @param keycloakProperties configuration containing the target registration realm
      * @param keycloakClient client used to create users and assign realm roles
      */
-    KeycloakRegistrationService(KeycloakProperties props, Keycloak keycloakClient) {
-        this.realm = props.getRealm();
+    KeycloakRegistrationService(KeycloakProperties keycloakProperties, Keycloak keycloakClient) {
+        this.realm = keycloakProperties.getRealm();
         this.keycloakClient = keycloakClient;
     }
 
@@ -41,6 +44,7 @@ public class KeycloakRegistrationService {
      * @throws UserAlreadyExistsException if user creation returns HTTP 409
      * @throws KeyCloakException if user creation returns another status of 400 or higher
      */
+    @Override
     public void registerUser(RegistrationRequest request) {
         UserRepresentation user = getUserRepresentation(request);
 
@@ -71,12 +75,32 @@ public class KeycloakRegistrationService {
     }
 
     /**
+     * Deletes an account matching the username, logging and suppressing cleanup errors.
+     *
+     * @param username the username to remove from Keycloak
+     */
+    @Override
+    public void deleteUserByUsername(String username) {
+        try {
+            RealmResource realmResource = keycloakClient.realm(realm);
+            List<UserRepresentation> users = realmResource.users().searchByUsername(username, true);
+            if (users != null) {
+                for (UserRepresentation user : users) {
+                    realmResource.users().get(user.getId()).remove();
+                }
+            }
+        } catch (Exception cleanupException) {
+            log.error("Failed to delete Keycloak user during registration compensation", cleanupException);
+        }
+    }
+
+    /**
      * Maps registration details to an enabled Keycloak user with a non-temporary password.
      *
      * @param request profile and password for the new account
      * @return user representation ready for creation
      */
-    private static @NonNull UserRepresentation getUserRepresentation(RegistrationRequest request) {
+    private UserRepresentation getUserRepresentation(RegistrationRequest request) {
         UserRepresentation user = new UserRepresentation();
         user.setUsername(request.username());
         user.setEmail(request.email());

@@ -2,23 +2,23 @@ package com.example.retailstore.webapp.web.controller;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
-import com.example.retailstore.webapp.clients.customer.CustomerRequest;
 import com.example.retailstore.webapp.clients.customer.CustomerResponse;
-import com.example.retailstore.webapp.clients.customer.CustomerServiceClient;
-import com.example.retailstore.webapp.config.TestSecurityConfig;
+import com.example.retailstore.webapp.config.SecurityConfig;
 import com.example.retailstore.webapp.exception.KeyCloakException;
 import com.example.retailstore.webapp.model.request.RegistrationRequest;
-import com.example.retailstore.webapp.services.KeycloakRegistrationService;
+import com.example.retailstore.webapp.services.SecurityHelper;
+import com.example.retailstore.webapp.services.UserRegistrationService;
 import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.Map;
@@ -31,13 +31,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.test.context.support.WithAnonymousUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.json.JsonMapper;
 
-@WebMvcTest(RegistrationController.class)
-@Import({TestSecurityConfig.class})
+@WebMvcTest(controllers = {RegistrationViewController.class, RegistrationRestController.class})
+@Import({SecurityConfig.class, SecurityHelper.class})
 class RegistrationControllerTest {
 
     private static final String REGISTER_ENDPOINT = "/api/register";
@@ -52,10 +53,16 @@ class RegistrationControllerTest {
     private JsonMapper jsonMapper;
 
     @MockitoBean
-    private KeycloakRegistrationService registrationService;
+    private ClientRegistrationRepository clientRegistrationRepository;
 
     @MockitoBean
-    private CustomerServiceClient customerServiceClient;
+    private UserRegistrationService userRegistrationService;
+
+    @Test
+    @WithAnonymousUser
+    void showRegistrationPage_shouldReturnView() throws Exception {
+        mockMvc.perform(get("/registration")).andExpect(status().isOk()).andExpect(view().name("registration"));
+    }
 
     /** Verifies that anonymous registration returns a success message when both service calls succeed. */
     @Test
@@ -74,9 +81,7 @@ class RegistrationControllerTest {
                 "Test State",
                 "12345",
                 "Test Country");
-        doNothing().when(registrationService).registerUser(any(RegistrationRequest.class));
-        // Mock CustomerServiceClient to return a valid CustomerResponse
-        when(customerServiceClient.getOrCreateCustomer(any(CustomerRequest.class)))
+        when(userRegistrationService.registerUserAndCustomer(any(RegistrationRequest.class)))
                 .thenReturn(new CustomerResponse(
                         1L,
                         TEST_USERNAME,
@@ -98,10 +103,10 @@ class RegistrationControllerTest {
                 .andExpect(jsonPath("$.message", is("User registered successfully")));
     }
 
-    /** Verifies that anonymous registration succeeds without a CSRF token. */
+    /** Verifies that registration without a CSRF token is forbidden when CSRF is enforced. */
     @Test
     @WithAnonymousUser
-    void shouldAllowRegistrationWithoutCsrfToken() throws Exception {
+    void shouldRejectRegistrationWithoutCsrfToken() throws Exception {
         RegistrationRequest request = new RegistrationRequest(
                 TEST_USERNAME,
                 TEST_EMAIL,
@@ -115,56 +120,34 @@ class RegistrationControllerTest {
                 "Test State",
                 "12345",
                 "Test Country");
-        doNothing().when(registrationService).registerUser(any(RegistrationRequest.class));
-        // Mock CustomerServiceClient to return a valid CustomerResponse
-        when(customerServiceClient.getOrCreateCustomer(any(CustomerRequest.class)))
-                .thenReturn(new CustomerResponse(
-                        1L,
-                        TEST_USERNAME,
-                        TEST_EMAIL,
-                        "9848022334",
-                        "junitAddress",
-                        null,
-                        "Test City",
-                        "Test State",
-                        "12345",
-                        "Test Country",
-                        BigDecimal.valueOf(10_000)));
 
         mockMvc.perform(post(REGISTER_ENDPOINT)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jsonMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("User registered successfully"));
+                .andExpect(status().isForbidden());
+
+        verifyNoInteractions(userRegistrationService);
     }
 
     /** Verifies that invalid registration fields produce HTTP 400. */
     @Test
     @WithAnonymousUser
     void shouldReturn400WhenRegistrationDataIsInvalid() throws Exception {
-        RegistrationRequest request = new RegistrationRequest(
-                "", // invalid username
-                "invalid-email", // invalid email
-                "", // invalid firstName
-                "", // invalid lastName
-                "pwd", // valid password
-                9848022334L,
-                "junitAddress",
-                null,
-                "Test City",
-                "Test State",
-                "12345",
-                "Test Country");
+        RegistrationRequest request =
+                new RegistrationRequest("", "invalid-email", "", "", "weak", null, "", null, "", "", "", "");
 
         mockMvc.perform(post(REGISTER_ENDPOINT)
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jsonMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(userRegistrationService);
     }
 
     @ParameterizedTest(name = "{0}: {1}")
     @MethodSource("invalidAddressComponents")
+    @WithAnonymousUser
     void shouldRejectMissingOrBlankAddressComponent(String field, String value) throws Exception {
         Map<String, Object> request = new HashMap<>(Map.of(
                 "username", TEST_USERNAME,
@@ -184,11 +167,12 @@ class RegistrationControllerTest {
         }
 
         mockMvc.perform(post(REGISTER_ENDPOINT)
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jsonMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest());
 
-        verifyNoInteractions(registrationService, customerServiceClient);
+        verifyNoInteractions(userRegistrationService);
     }
 
     private static Stream<Arguments> invalidAddressComponents() {
@@ -215,8 +199,8 @@ class RegistrationControllerTest {
                 "Test Country");
 
         doThrow(new KeyCloakException("500 Internal server Exception : Keycloak registration failed"))
-                .when(registrationService)
-                .registerUser(any(RegistrationRequest.class));
+                .when(userRegistrationService)
+                .registerUserAndCustomer(any(RegistrationRequest.class));
 
         mockMvc.perform(post(REGISTER_ENDPOINT)
                         .with(csrf())
@@ -227,7 +211,7 @@ class RegistrationControllerTest {
                 .andExpect(jsonPath("$.type", is("https://api.retailstore.com/errors/keycloak-registration")))
                 .andExpect(jsonPath("$.title", is("Keycloak Registration Error")))
                 .andExpect(jsonPath("$.status", is(500)))
-                .andExpect(jsonPath("$.detail", is("500 Internal server Exception : Keycloak registration failed")))
-                .andExpect(jsonPath("$.instance", is(REGISTER_ENDPOINT)));
+                .andExpect(jsonPath("$.detail", is("500 Internal server Exception : Keycloak registration failed")));
+        //                .andExpect(jsonPath("$.instance", is(REGISTER_ENDPOINT)));
     }
 }

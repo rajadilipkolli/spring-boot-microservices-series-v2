@@ -11,10 +11,17 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.orderservice.common.OrderServicePostGreSQLContainer;
+import com.example.orderservice.config.AuditConfiguration;
 import com.example.orderservice.entities.Order;
+import com.example.orderservice.entities.OrderStatus;
+import com.example.orderservice.model.Address;
 import com.example.orderservice.util.TestData;
+import java.sql.Timestamp;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -31,11 +38,12 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 
 @ActiveProfiles({PROFILE_TEST})
-@Import(OrderServicePostGreSQLContainer.class)
+@Import({OrderServicePostGreSQLContainer.class, AuditConfiguration.class})
 @DataJpaTest(properties = {"spring.jpa.hibernate.ddl-auto=validate"})
 class OrderRepositoryTest {
 
     @Autowired private OrderRepository orderRepository;
+    @Autowired private OrderSearchRepository orderSearchRepository;
     @Autowired private OrderItemRepository orderItemRepository;
     @Autowired private JdbcTemplate jdbcTemplate;
 
@@ -156,7 +164,7 @@ class OrderRepositoryTest {
             Order order1 = TestData.getOrder();
             order1.setSource("WEB");
             order1.setDeliveryAddress(
-                    new com.example.orderservice.model.Address(
+                    new Address(
                             order1.getDeliveryAddress().addressLine1(),
                             order1.getDeliveryAddress().addressLine2(),
                             "New York",
@@ -168,7 +176,7 @@ class OrderRepositoryTest {
             Order order2 = TestData.getOrder();
             order2.setSource("MOBILE");
             order2.setDeliveryAddress(
-                    new com.example.orderservice.model.Address(
+                    new Address(
                             order2.getDeliveryAddress().addressLine1(),
                             order2.getDeliveryAddress().addressLine2(),
                             "Los Angeles",
@@ -178,16 +186,17 @@ class OrderRepositoryTest {
             orderRepository.save(order2);
 
             Page<Long> results =
-                    orderRepository.searchOrdersByKeyword(
+                    orderSearchRepository.searchOrdersByKeyword(
                             "York", null, null, PageRequest.of(0, 10));
             assertThat(results.getContent()).containsExactly(order1.getId());
 
             results =
-                    orderRepository.searchOrdersByKeyword("mob", null, null, PageRequest.of(0, 10));
+                    orderSearchRepository.searchOrdersByKeyword(
+                            "mob", null, null, PageRequest.of(0, 10));
             assertThat(results.getContent()).containsExactly(order2.getId());
 
             results =
-                    orderRepository.searchOrdersByKeyword(
+                    orderSearchRepository.searchOrdersByKeyword(
                             "nomatch", null, null, PageRequest.of(0, 10));
             assertThat(results.getContent()).isEmpty();
         }
@@ -212,12 +221,12 @@ class OrderRepositoryTest {
 
             for (int page = 0; page < ids.size(); page++) {
                 Page<Long> results =
-                        orderRepository.searchOrdersByKeyword(
+                        orderSearchRepository.searchOrdersByKeyword(
                                 "Product", null, null, PageRequest.of(page, 1));
                 assertThat(results.getContent()).containsExactly(ids.get(page));
                 assertThat(results.getTotalElements()).isEqualTo(ids.size());
                 Page<Long> descending =
-                        orderRepository.searchOrdersByKeyword(
+                        orderSearchRepository.searchOrdersByKeyword(
                                 "Product",
                                 null,
                                 null,
@@ -225,7 +234,7 @@ class OrderRepositoryTest {
                 assertThat(descending.getContent()).containsExactly(ids.get(ids.size() - page - 1));
             }
             assertThat(
-                            orderRepository
+                            orderSearchRepository
                                     .searchOrdersByKeyword(
                                             "Product", null, null, Pageable.unpaged())
                                     .getContent())
@@ -243,10 +252,9 @@ class OrderRepositoryTest {
                             Sort.by("source"),
                             Sort.by("id", "source"),
                             Sort.by(Sort.Order.asc("id").ignoreCase()))) {
-                assertThatThrownBy(
-                                () ->
-                                        orderRepository.searchOrdersByKeyword(
-                                                "Product", null, null, PageRequest.of(0, 10, sort)))
+                assertThatThrownBy(() ->
+                                orderSearchRepository.searchOrdersByKeyword(
+                                        "Product", null, null, PageRequest.of(0, 10, sort)))
                         .hasMessageContaining("Keyword search only supports sorting by id");
             }
         }
@@ -269,7 +277,7 @@ class OrderRepositoryTest {
 
             // A full page forces the count query; exact matches may appear in either order.
             Page<Long> firstPage =
-                    orderRepository.searchOrdersBySimilarity(
+                    orderSearchRepository.searchOrdersBySimilarity(
                             "SomeWeb", threshold, null, null, PageRequest.of(0, 2));
             assertThat(firstPage.getContent())
                     .containsExactlyInAnyOrder(orders.get(0).getId(), orders.get(1).getId());
@@ -277,7 +285,7 @@ class OrderRepositoryTest {
 
             // The partial match qualifies through either cutoff, but not when both exclude it.
             Page<Long> nextPage =
-                    orderRepository.searchOrdersBySimilarity(
+                    orderSearchRepository.searchOrdersBySimilarity(
                             "SomeWeb", threshold, null, null, PageRequest.of(1, 2));
             List<Long> expectedRemainingIds =
                     expectedCount == 3 ? List.of(orders.get(2).getId()) : List.of();
@@ -285,7 +293,7 @@ class OrderRepositoryTest {
             assertThat(nextPage.getTotalElements()).isEqualTo(expectedCount);
 
             Page<Long> beyondLastPage =
-                    orderRepository.searchOrdersBySimilarity(
+                    orderSearchRepository.searchOrdersBySimilarity(
                             "SomeWeb", threshold, null, null, PageRequest.of(2, 2));
             assertThat(beyondLastPage.getContent()).isEmpty();
             assertThat(beyondLastPage.getTotalElements()).isEqualTo(expectedCount);
@@ -303,14 +311,96 @@ class OrderRepositoryTest {
             orderRepository.save(order2);
 
             Page<Long> results =
-                    orderRepository.searchOrdersBySimilarity(
+                    orderSearchRepository.searchOrdersBySimilarity(
                             "SomeWeb", 0.3, null, null, PageRequest.of(0, 10));
             assertThat(results.getContent()).containsExactly(order1.getId());
 
             results =
-                    orderRepository.searchOrdersBySimilarity(
+                    orderSearchRepository.searchOrdersBySimilarity(
                             "NoMatchHere", 0.3, null, null, PageRequest.of(0, 10));
             assertThat(results.getContent()).isEmpty();
+        }
+
+        @Test
+        void
+                findByStatusAndLastModifiedDateLessThanOrderByIdAsc_RespectsRetryBoundaryAndStatusFilter() {
+            Instant now = Instant.now().truncatedTo(ChronoUnit.SECONDS);
+            Instant cutoff = now.minus(5, ChronoUnit.MINUTES);
+
+            // Row 1: NEW, lastModifiedDate 10 minutes ago (with explicit SQL offset +00) -> should
+            // be included
+            jdbcTemplate.update(
+                    """
+                    INSERT INTO orders (id, customer_id, status, source, delivery_address_line1, delivery_address_city,
+                                        delivery_address_state, delivery_address_zip_code, delivery_address_country,
+                                        created_by, created_date, last_modified_date)
+                    VALUES (1001, 1, 'NEW', 'WEB', 'Line1', 'City', 'State', '12345', 'USA',
+                            'system', '2026-01-01 10:00:00+00', '2026-01-01 10:00:00+00')
+                    """);
+
+            // Row 2: NEW, lastModifiedDate 10 minutes ago (with explicit SQL offset +05:30) ->
+            // should be included
+            jdbcTemplate.update(
+                    """
+                    INSERT INTO orders (id, customer_id, status, source, delivery_address_line1, delivery_address_city,
+                                        delivery_address_state, delivery_address_zip_code, delivery_address_country,
+                                        created_by, created_date, last_modified_date)
+                    VALUES (1002, 1, 'NEW', 'WEB', 'Line1', 'City', 'State', '12345', 'USA',
+                            'system', '2026-01-01 10:00:00+00', '2026-01-01 15:30:00+05:30')
+                    """);
+
+            // Row 3: CONFIRMED (non-NEW), lastModifiedDate 10 minutes ago -> excluded by status
+            jdbcTemplate.update(
+                    """
+                    INSERT INTO orders (id, customer_id, status, source, delivery_address_line1, delivery_address_city,
+                                        delivery_address_state, delivery_address_zip_code, delivery_address_country,
+                                        created_by, created_date, last_modified_date)
+                    VALUES (1003, 1, 'CONFIRMED', 'WEB', 'Line1', 'City', 'State', '12345', 'USA',
+                            'system', '2026-01-01 10:00:00+00', '2026-01-01 10:00:00+00')
+                    """);
+
+            // Row 4: NEW, lastModifiedDate NULL -> excluded by null comparison
+            jdbcTemplate.update(
+                    """
+                    INSERT INTO orders (id, customer_id, status, source, delivery_address_line1, delivery_address_city,
+                                        delivery_address_state, delivery_address_zip_code, delivery_address_country,
+                                        created_by, created_date, last_modified_date)
+                    VALUES (1004, 1, 'NEW', 'WEB', 'Line1', 'City', 'State', '12345', 'USA',
+                            'system', '2026-01-01 10:00:00+00', NULL)
+                    """);
+
+            // Row 5: NEW, lastModifiedDate 1 minute ago (strictly after cutoff) -> excluded by
+            // boundary
+            jdbcTemplate.update(
+                    """
+                    INSERT INTO orders (id, customer_id, status, source, delivery_address_line1, delivery_address_city,
+                                        delivery_address_state, delivery_address_zip_code, delivery_address_country,
+                                        created_by, created_date, last_modified_date)
+                    VALUES (1005, 1, 'NEW', 'WEB', 'Line1', 'City', 'State', '12345', 'USA',
+                            'system', '2026-01-01 10:00:00+00', ?)
+                    """,
+                    Timestamp.from(now.minus(1, ChronoUnit.MINUTES)));
+
+            // Also test JPA audited row persistence and epoch comparison
+            Order auditedOrder = TestData.getOrder();
+            auditedOrder.setStatus(OrderStatus.NEW);
+            Order savedOrder = orderRepository.saveAndFlush(auditedOrder);
+            assertThat(savedOrder.getCreatedDate()).isNotNull();
+
+            // Read back via JDBC to compare epoch seconds
+            long epochSecondsFromDb =
+                    jdbcTemplate.queryForObject(
+                            "SELECT EXTRACT(EPOCH FROM created_date)::bigint FROM orders WHERE id = ?",
+                            Long.class,
+                            savedOrder.getId());
+            assertThat(epochSecondsFromDb)
+                    .isCloseTo(savedOrder.getCreatedDate().getEpochSecond(), Offset.offset(1L));
+
+            List<Order> result =
+                    orderRepository.findByStatusAndLastModifiedDateLessThanOrderByIdAsc(
+                            OrderStatus.NEW, cutoff);
+
+            assertThat(result).extracting(Order::getId).containsExactly(1001L, 1002L);
         }
     }
 }

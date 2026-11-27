@@ -1,6 +1,18 @@
 {
   "reflection": [
     {
+      "type": "org.apache.coyote.AbstractProtocol",
+      "methods": [
+        {
+          "name": "setProperty",
+          "parameterTypes": [
+            "java.lang.String",
+            "java.lang.String"
+          ]
+        }
+      ]
+    },
+    {
       "condition": {
         "typeReached": "io.hypersistence.utils.hibernate.id.TsidGenerator"
       },
@@ -83,24 +95,6 @@
     },
     {
       "condition": {
-        "typeReached": "com.example.orderservice.model.dtos.OrderDto"
-      },
-      "type": "com.example.orderservice.model.dtos.OrderDto",
-      "allDeclaredConstructors": true,
-      "allDeclaredMethods": true,
-      "allDeclaredFields": true
-    },
-    {
-      "condition": {
-        "typeReached": "com.example.orderservice.model.dtos.OrderItemDto"
-      },
-      "type": "com.example.orderservice.model.dtos.OrderItemDto",
-      "allDeclaredConstructors": true,
-      "allDeclaredMethods": true,
-      "allDeclaredFields": true
-    },
-    {
-      "condition": {
         "typeReached": "com.example.orderservice.model.request.OrderItemRequest"
       },
       "type": "com.example.orderservice.model.request.OrderItemRequest",
@@ -131,15 +125,6 @@
         "typeReached": "com.example.orderservice.model.response.OrderResponse"
       },
       "type": "com.example.orderservice.model.response.OrderResponse",
-      "allDeclaredConstructors": true,
-      "allDeclaredMethods": true,
-      "allDeclaredFields": true
-    },
-    {
-      "condition": {
-        "typeReached": "com.example.orderservice.model.response.PagedResult"
-      },
-      "type": "com.example.orderservice.model.response.PagedResult",
       "allDeclaredConstructors": true,
       "allDeclaredMethods": true,
       "allDeclaredFields": true
@@ -179,6 +164,213 @@
       "allDeclaredConstructors": true,
       "allDeclaredMethods": true,
       "allDeclaredFields": true
+    },
+    {
+      "condition": {
+        "typeReached": "com.example.common.dto.OrderDto"
+      },
+      "type": "com.example.common.dto.OrderDto",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {
+        "typeReached": "com.example.common.dto.OrderDto$OrderItemDto"
+      },
+      "type": "com.example.common.dto.OrderDto$OrderItemDto",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {
+        "typeReached": "org.apache.kafka.streams.state.BuiltInDslStoreSuppliers$RocksDBDslStoreSuppliers"
+      },
+      "type": "org.apache.kafka.streams.state.BuiltInDslStoreSuppliers$RocksDBDslStoreSuppliers",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {
+        "typeReached": "org.apache.kafka.streams.errors.DefaultProductionExceptionHandler"
+      },
+      "type": "org.apache.kafka.streams.errors.DefaultProductionExceptionHandler",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {
+        "typeReached": "org.apache.kafka.streams.errors.LogAndFailExceptionHandler"
+      },
+      "type": "org.apache.kafka.streams.errors.LogAndFailExceptionHandler",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {
+        "typeReached": "org.apache.kafka.streams.errors.LogAndFailProcessingExceptionHandler"
+      },
+      "type": "org.apache.kafka.streams.errors.LogAndFailProcessingExceptionHandler",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {
+        "typeReached": "org.apache.kafka.streams.processor.FailOnInvalidTimestamp"
+      },
+      "type": "org.apache.kafka.streams.processor.FailOnInvalidTimestamp",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {
+        "typeReached": "org.apache.kafka.streams.processor.WallclockTimestampExtractor"
+      },
+      "type": "org.apache.kafka.streams.processor.WallclockTimestampExtractor",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {
+        "typeReached": "org.apache.kafka.streams.processor.internals.DefaultKafkaClientSupplier"
+      },
+      "type": "org.apache.kafka.streams.processor.internals.DefaultKafkaClientSupplier",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {
+        "typeReached": "org.apache.kafka.streams.processor.internals.NoOpProcessorWrapper"
+      },
+      "type": "org.apache.kafka.streams.processor.internals.NoOpProcessorWrapper",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {
+        "typeReached": "org.apache.kafka.streams.processor.internals.StreamsPartitionAssignor"
+      },
+      "type": "org.apache.kafka.streams.processor.internals.StreamsPartitionAssignor",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {
+        "typeReached": "org.apache.kafka.streams.processor.internals.assignment.HighAvailabilityTaskAssignor"
+      },
+      "type": "org.apache.kafka.streams.processor.internals.assignment.HighAvailabilityTaskAssignor",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {
+        "typeReached": "org.apache.kafka.streams.processor.internals.assignment.LegacyStickyTaskAssignor"
+      },
+      "type": "org.apache.kafka.streams.processor.internals.assignment.LegacyStickyTaskAssignor",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {
+        "typeReached": "org.apache.kafka.streams.processor.internals.assignment.FallbackPriorTaskAssignor"
+      },
+      "type": "org.apache.kafka.streams.processor.internals.assignment.FallbackPriorTaskAssignor",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {
+        "typeReached": "org.apache.kafka.streams.processor.assignment.assignors.StickyTaskAssignor"
+      },
+      "type": "org.apache.kafka.streams.processor.assignment.assignors.StickyTaskAssignor",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {
+        "typeReached": "org.apache.kafka.clients.consumer.RangeAssignor"
+      },
+      "type": "org.apache.kafka.clients.consumer.RangeAssignor",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {
+        "typeReached": "org.apache.kafka.clients.consumer.RoundRobinAssignor"
+      },
+      "type": "org.apache.kafka.clients.consumer.RoundRobinAssignor",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {
+        "typeReached": "org.apache.kafka.clients.consumer.StickyAssignor"
+      },
+      "type": "org.apache.kafka.clients.consumer.StickyAssignor",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {
+        "typeReached": "org.apache.kafka.clients.consumer.CooperativeStickyAssignor"
+      },
+      "type": "org.apache.kafka.clients.consumer.CooperativeStickyAssignor",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {
+        "typeReached": "org.jobrunr.storage.sql.common.DatabaseCreator"
+      },
+      "type": "org.jobrunr.storage.sql.common.DatabaseCreator",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {
+        "typeReached": "org.jobrunr.storage.sql.common.migrations.SqlMigrationByPath"
+      },
+      "type": "org.jobrunr.storage.sql.common.migrations.SqlMigrationByPath",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {
+        "typeReached": "org.jobrunr.storage.sql.common.migrations.DefaultSqlMigrationProvider"
+      },
+      "type": "org.jobrunr.storage.sql.common.migrations.DefaultSqlMigrationProvider",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "condition": {
+        "typeReached": "org.jobrunr.storage.sql.common.DatabaseMigrationsProvider"
+      },
+      "type": "org.jobrunr.storage.sql.common.DatabaseMigrationsProvider",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
     }
   ],
   "resources": [
@@ -196,6 +388,12 @@
     },
     {
       "glob": "log4j2-spring.xml"
+    },
+    {
+      "glob": "org/jobrunr/storage/sql/**"
+    },
+    {
+      "glob": "org/springframework/modulith/**"
     }
   ]
 }

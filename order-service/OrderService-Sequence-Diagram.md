@@ -29,11 +29,11 @@ sequenceDiagram
     alt Products exist and in stock
         OrderAPI->>OrderAPI: OrderMapper.orderRequestToEntity()
         OrderAPI->>OrderDB: INSERT Order + OrderItems<br/>(@Transactional)
-        OrderDB-->>OrderAPI: Saved Order (with ID)
+        OrderDB-->>OrderAPI: Saved Order (with TSID)
         
-        OrderAPI->>OrderAPI: OrderMapper.toDto(savedOrder)
-        OrderAPI->>Kafka: @Async sendOrder(OrderDto)<br/>Topic: "orders"
-        Kafka-->>OrderAPI: Kafka send confirmation
+        OrderAPI->>OrderAPI: OrderMapper.toDto(savedOrder)<br/>.withAttemptId(UUID)
+        OrderAPI->>Kafka: Spring Modulith Outbox Event<br/>publishEvent(persistedOrderDto)<br/>Topic: "orders"
+        Kafka-->>OrderAPI: Outbox message dispatched
         
         OrderAPI->>OrderAPI: OrderMapper.toResponse(savedOrder)
         OrderAPI-->>Gateway: OrderResponse (201 Created)
@@ -70,7 +70,7 @@ sequenceDiagram
         Gateway-->>Client: Order details
         
         Note over OrderAPI: If circuit breaker opens
-        OrderAPI-->>Gateway: Fallback response<br/>("fallback-response for id: {id}")
+        OrderAPI-->>Gateway: Fallback 503 SERVICE_UNAVAILABLE<br/>OrderResponse.emptyResponse(id)
     end
 
     rect rgba(251, 146, 60, 0.3)
@@ -93,24 +93,24 @@ sequenceDiagram
         KafkaStreams->>PaymentTopic: Stream from payment-orders
         KafkaStreams->>StockTopic: Stream from stock-orders
         
-        KafkaStreams->>KafkaStreams: Join streams within 10s window<br/>StreamJoined.with()
+        KafkaStreams->>KafkaStreams: Correlate by orderId:attemptId<br/>Join within 30s window + 30s grace<br/>StreamJoined.with(Serdes.String())
         KafkaStreams->>KafkaStreams: OrderManageService.confirm()<br/>(business logic)
         
         Note over KafkaStreams: Status Resolution Logic:<br/>ACCEPT + ACCEPT = CONFIRMED<br/>REJECT + REJECT = REJECTED<br/>ACCEPT + REJECT = ROLLBACK
         
-        KafkaStreams->>OrdersTopic: Publish final OrderDto<br/>(with resolved status)
-        KafkaStreams->>OrderDB: UPDATE order SET status = ?<br/>WHERE id = ?
+        KafkaStreams->>OrdersTopic: Publish final OrderDto<br/>(keyed by orderId)
+        KafkaStreams->>OrderDB: UPDATE orders SET status = ?, source = ?<br/>WHERE id = ?
     end
 
     Note over Client, JobRunr: ⏰ Background Job Processing
-    JobRunr->>JobRunr: @Job("reProcessNewOrders")<br/>Scheduled every 5 minutes
-    JobRunr->>OrderDB: SELECT orders WHERE status = 'NEW'<br/>AND createdDate < now() - 5min
+    JobRunr->>JobRunr: @Job("reProcessNewOrders")<br/>Scheduled minutely (Cron.minutely())
+    JobRunr->>OrderDB: SELECT orders WHERE status = 'NEW'<br/>AND last_modified_date < now() - 5min
     OrderDB-->>JobRunr: List<Order> stuck orders
     
     loop For each stuck order
-        JobRunr->>JobRunr: OrderMapper.toDto(order)
-        JobRunr->>Kafka: Republish OrderDto<br/>Topic: "orders"
-        Kafka-->>JobRunr: Retry confirmation
+        JobRunr->>JobRunr: OrderMapper.toDto(order).withAttemptId(UUID)
+        JobRunr->>Kafka: eventPublisher.publishEvent(persistedOrderDto)<br/>Topic: "orders" (Spring Modulith Outbox)
+        JobRunr->>OrderDB: UPDATE order SET lastModifiedDate = now()
     end
 
     Note over Client, JobRunr: 🔄 Order Update & Delete Operations
@@ -132,40 +132,39 @@ sequenceDiagram
         Note over Client, OrderAPI: <span style="color: white">Delete Order</span>
         Client->>Gateway: DELETE /order-service/api/orders/{id}
         Gateway->>OrderAPI: Forward request
-        OrderAPI->>OrderDB: SELECT order WHERE id = ?
-        OrderDB-->>OrderAPI: Order exists check
-        OrderAPI->>OrderDB: DELETE FROM orders WHERE id = ?<br/>(@Transactional)
-        OrderDB-->>OrderAPI: Deletion confirmed
+        OrderAPI->>OrderDB: SELECT order WHERE id = ? AND deleted = false
+        OrderDB-->>OrderAPI: Active order check
+        OrderAPI->>OrderDB: UPDATE orders SET deleted = true WHERE id = ?<br/>(Soft delete)
+        OrderDB-->>OrderAPI: Update confirmed
         OrderAPI-->>Gateway: 202 Accepted
-        Gateway-->>Client: Deletion confirmed
+        Gateway-->>Client: Deletion accepted
     end
 
     Note over Client, JobRunr: 🎯 Batch Operations & Performance
     
     rect rgba(139, 92, 246, 0.3)
-        Note over Client, OrderAPI: <span style="color: white">Batch Order Creation</span>
-        Client->>Gateway: POST /order-service/api/orders/batch<br/>(List<OrderRequest>)
-        Gateway->>OrderAPI: Forward batch request
-        OrderAPI->>OrderAPI: Extract all product codes<br/>(distinct validation)
-        OrderAPI->>Catalog: Validate all products at once
-        Catalog-->>OrderAPI: Batch validation result
+        Note over Client, OrderAPI: <span style="color: white">Mock Batch Order Generation</span>
+        Client->>Gateway: POST /order-service/api/orders/generate?batchSize=100<br/>(Header: Idempotency-Key)
+        Gateway->>OrderAPI: Forward generation request
+        OrderAPI->>OrderAPI: Check Idempotency-Key cache
+        OrderAPI->>Catalog: Batch validate products (in batches of 25)
+        Catalog-->>OrderAPI: Validation result
         
-        OrderAPI->>OrderDB: saveAll(List<Order>)<br/>(@Transactional batch)
+        OrderAPI->>OrderDB: saveBatchOrders() / saveAll(List<Order>)<br/>(@Transactional batch)
         OrderDB-->>OrderAPI: List<Order> saved
         
-        OrderAPI->>OrderAPI: parallelStream().map(toDto)<br/>(parallel processing)
-        OrderAPI->>Kafka: Parallel Kafka publishing<br/>(forEach async send)
-        Kafka-->>OrderAPI: Batch confirmations
+        OrderAPI->>Kafka: Spring Modulith publishEvent(OrderDto)<br/>(Each with unique attemptId)
+        Kafka-->>OrderAPI: Outbox confirmations
         
-        OrderAPI-->>Gateway: List<OrderResponse>
-        Gateway-->>Client: Batch creation success
+        OrderAPI-->>Gateway: GenericResponse(success=true)
+        Gateway-->>Client: 200 OK
     end
 
     Note over Client, JobRunr: 🛡️ Resilience & Error Handling
     
     rect rgba(239, 68, 68, 0.3)
         Note over OrderAPI, Kafka: <span style="color: white">Circuit Breaker Patterns</span>
-        OrderAPI->>Catalog: @CircuitBreaker("default")
+        OrderAPI->>Catalog: @CircuitBreaker("catalog-service")
         
         alt Circuit Open (Catalog unavailable)
             OrderAPI->>OrderAPI: productsExistsDefaultValue()<br/>(fallback method)
@@ -177,58 +176,59 @@ sequenceDiagram
         KafkaStreams->>KafkaStreams: RecoveringDeserializationExceptionHandler
         KafkaStreams->>Kafka: DeadLetterPublishingRecoverer<br/>Topic: "recovererDLQ"
         
-        Note over KafkaStreams: Stream Configuration:<br/>- EXACTLY_ONCE_V2 processing<br/>- 10MB state store cache<br/>- 2 stream threads<br/>- 1s commit interval
+        Note over KafkaStreams: Stream Configuration:<br/>- EXACTLY_ONCE_V2 processing<br/>- 10MB state store cache<br/>- 2 stream threads<br/>- 1s commit interval (configurer) / 100ms (yml)
     end
 ```
 
 ## Key Architecture Components
 
 ### 🏗️ **Core Service Architecture**
-- **REST API**: Spring Boot with comprehensive CRUD operations
-- **Database**: PostgreSQL with Liquibase migrations (XML format)
-- **Resilience**: Circuit Breaker, Rate Limiter, Bulkhead patterns
-- **Observability**: Micrometer tracing, logging aspects, metrics
+- **Runtime & Framework**: Java 25, Spring Boot 4.1.2, Spring Cloud 2025.1.4, Spring Modulith 2.1.2
+- **REST API**: Spring MVC with comprehensive CRUD and search operations
+- **Database**: PostgreSQL 18 with Liquibase migrations (XML format) and Hypersistence TSID generation
+- **Resilience**: Resilience4j 2.4.0 (Circuit Breaker, Rate Limiter, Bulkhead patterns)
+- **Observability**: Micrometer tracing, `@Observed` / `@Loggable` aspects, Actuator metrics
 
 ### 📡 **Event-Driven Architecture**
-- **Kafka Producer**: Async order publishing to `orders` topic
-- **Kafka Streams**: Real-time stream processing with windowed joins
+- **Outbox Publishing**: Spring Modulith Kafka Event Externalization routing `OrderDto` to `orders` topic
+- **Kafka Streams**: Real-time stream processing with windowed joins (30s window + 30s grace)
 - **Topics**: `orders`, `payment-orders`, `stock-orders`, `recovererDLQ`
 
 ### 🔄 **Distributed Transaction Management**
 - **Saga Pattern**: Choreography-based with Kafka Streams
 - **Status Flow**: NEW → ACCEPT/REJECT → CONFIRMED/ROLLBACK
 - **Compensation**: Automatic rollback on payment/inventory failures
-- **Exactly-Once**: Guaranteed message processing semantics
+- **Exactly-Once**: Guaranteed message processing semantics (`processing.guarantee: exactly_once_v2`)
 
 ### ⏰ **Background Processing**
-- **JobRunr Integration**: Scheduled job execution and monitoring
-- **Retry Logic**: Automatic reprocessing of stuck orders
-- **Dashboard**: Web UI at port 28282 for job monitoring
+- **JobRunr Integration**: JobRunr 9.0.2 starter for scheduled job execution and monitoring
+- **Retry Logic**: Minutely check reprocessing NEW orders stuck > 5 minutes
+- **Dashboard**: Web UI at port 28282 (`/dashboard/overview`) for job monitoring
 
 ### 🛡️ **Resilience Patterns**
-- **Circuit Breaker**: Catalog service integration protection
+- **Circuit Breaker**: Catalog service integration protection (`catalog-service`), endpoint protection (`default`)
 - **Rate Limiting**: API endpoint protection
 - **Bulkhead**: Resource isolation for critical operations
-- **Dead Letter Queue**: Failed message recovery
+- **Dead Letter Queue**: Failed message recovery via `recovererDLQ`
 
 ### 📊 **Performance Optimizations**
-- **Pagination**: Efficient N+1 query prevention
-- **Parallel Processing**: CompletableFuture for response mapping
+- **Pagination**: Efficient N+1 query prevention (ID-only pagination followed by IN batch fetch)
+- **Parallel Processing**: Virtual threads (Loom) and CompletableFuture for response mapping
 - **Batch Operations**: Bulk order creation and validation
-- **Connection Pooling**: Optimized database connections
+- **Connection Pooling**: Optimized HikariCP database connections
 
 ## Service Endpoints Summary
 
-| Endpoint                    | Method | Description           | Features                             |
-|-----------------------------|--------|-----------------------|--------------------------------------|
-| `/api/orders`               | GET    | Get paginated orders  | Pagination, sorting, N+1 prevention  |
-| `/api/orders/{id}`          | GET    | Get order by ID       | Circuit breaker, rate limiting       |
-| `/api/orders`               | POST   | Create new order      | Product validation, Kafka publishing |
-| `/api/orders/{id}`          | PUT    | Update existing order | Transactional updates                |
-| `/api/orders/{id}`          | DELETE | Delete order          | Soft/hard deletion                   |
-| `/api/orders/customer/{id}` | GET    | Get customer orders   | Customer-specific pagination         |
-| `/api/orders/all`           | GET    | Query Kafka streams   | Real-time materialized view          |
-| `/api/orders/generate`      | POST   | Generate mock orders  | Development/testing utility          |
+| Endpoint                    | Method | Description           | Features                                                    |
+|-----------------------------|--------|-----------------------|-------------------------------------------------------------|
+| `/api/orders`               | GET    | Get paginated orders  | Pagination, sorting, N+1 prevention                         |
+| `/api/orders/{id}`          | GET    | Get order by ID       | Circuit breaker, rate limiting, bulkhead, fallback          |
+| `/api/orders`               | POST   | Create new order      | Product validation, Spring Modulith outbox event publishing |
+| `/api/orders/{id}`          | PUT    | Update existing order | Transactional updates                                       |
+| `/api/orders/{id}`          | DELETE | Delete order          | Soft deletion (`deleted = true`)                            |
+| `/api/orders/customer/{id}` | GET    | Get customer orders   | Customer-specific pagination                                |
+| `/api/orders/search`        | GET    | Search orders         | Trigram similarity or keyword search                        |
+| `/api/orders/generate`      | POST   | Generate mock orders  | Batch order generation with `Idempotency-Key` header        |
 
 ## Kafka Topics & Event Flow
 
@@ -244,8 +244,8 @@ graph TB
     end
     
     subgraph "🛍️ Order Service"
-        OS[Order Service] --> |"Publish"| O
-        JS[JobRunr Scheduler] --> |"Retry"| O
+        OS[Order Service] --> |"Modulith Outbox"| O
+        JS[JobRunr Scheduler] --> |"Retry Event"| O
     end
     
     style O fill:#3b82f6,stroke:#ffffff,stroke-width:2px,color:#ffffff
@@ -256,19 +256,20 @@ graph TB
 ## Database Schema
 
 ```sql
--- Orders table with audit fields
+-- Orders table with audit fields and soft-delete flag
 CREATE TABLE orders (
-    id BIGSERIAL PRIMARY KEY,
+    id BIGINT PRIMARY KEY, -- TSID generated
     customer_id BIGINT NOT NULL,
     status VARCHAR(20) DEFAULT 'NEW',
     source VARCHAR(50),
-    delivery_address_line1 VARCHAR(255),
+    delivery_address_line1 VARCHAR(255) NOT NULL,
     delivery_address_line2 VARCHAR(255),
-    delivery_address_city VARCHAR(100),
-    delivery_address_state VARCHAR(100),
-    delivery_address_zip_code VARCHAR(20),
-    delivery_address_country VARCHAR(100),
+    delivery_address_city VARCHAR(100) NOT NULL,
+    delivery_address_state VARCHAR(100) NOT NULL,
+    delivery_address_zip_code VARCHAR(20) NOT NULL,
+    delivery_address_country VARCHAR(100) NOT NULL,
     version SMALLINT DEFAULT 0,
+    deleted BOOLEAN NOT NULL DEFAULT FALSE,
     created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_by VARCHAR(100),
     last_modified_date TIMESTAMP,
@@ -277,7 +278,7 @@ CREATE TABLE orders (
 
 -- Order items with product details
 CREATE TABLE order_items (
-    id BIGSERIAL PRIMARY KEY,
+    id BIGINT PRIMARY KEY, -- TSID generated
     order_id BIGINT REFERENCES orders(id),
     product_code VARCHAR(100) NOT NULL,
     product_name VARCHAR(255),

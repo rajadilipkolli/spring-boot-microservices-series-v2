@@ -13,12 +13,18 @@
 ```mermaid
 flowchart TD
 
+subgraph group_edge["Gateway perimeter"]
+  node_envoy["Envoy Gateway"]
+end
+
 subgraph group_customer["Customer experience"]
   node_storefront["Retail web app"]
+  node_jobrunr["JobRunr dashboard"]
+  node_keycloak["Keycloak"]
 end
 
 subgraph group_platform["Platform access"]
-  node_gateway["API gateway"]
+  node_gateway["API gateway (Spring Cloud)"]
   node_registry["Service registry"]
   node_config["Configuration server"]
 end
@@ -36,16 +42,21 @@ subgraph group_operations["Platform operations"]
   node_observability["Metrics and tracing"]
 end
 
-node_shopper(("Shopper"))
+node_shopper(("Shopper / Client"))
 node_prometheus["Prometheus"]
 node_grafana["Grafana"]
 
-node_shopper -->|"uses"| node_storefront
-node_storefront -->|"requests APIs"| node_gateway
+node_shopper -->|"HTTP (retailstore.local, api.retailstore.local, keycloak.local, jobrunr.local)"| node_envoy
+node_envoy -->|"host: retailstore.local"| node_storefront
+node_envoy -->|"host: keycloak.local"| node_keycloak
+node_envoy -->|"host: jobrunr.local"| node_jobrunr
+node_envoy -->|"host: api.retailstore.local"| node_gateway
+node_storefront -->|"requests APIs via"| node_gateway
 node_gateway -->|"routes requests"| node_catalog
 node_gateway -->|"routes requests"| node_inventory
 node_gateway -->|"routes requests"| node_orders
 node_gateway -->|"routes requests"| node_payments
+node_orders -.->|"exposes dashboard"| node_jobrunr
 node_registry -->|"provides discovery"| node_gateway
 node_registry -->|"provides discovery"| node_catalog
 node_registry -->|"provides discovery"| node_inventory
@@ -94,16 +105,20 @@ class node_shopper,node_prometheus,node_grafana toneIndigo
 
 - [🎯 Overview](#-overview)
 - [✨ Key Features](#-key-features)
-- [🏗️ Architecture](#️-architecture)
+- [🏗️ Architecture](#-architecture)
+- [📦 Services Overview](#-services-overview)
 - [🔧 Tech Stack](#-tech-stack)
 - [🚀 Quick Start](#-quick-start)
-- [🎛️ Service Discovery & API Access](#️-service-discovery--api-access)
+- [🎛️ Service Discovery & API Access](#service-discovery-api-access)
+- [🔐 Keycloak Security Configuration](#-keycloak-security-configuration)
 - [📊 Observability](#-observability)
-- [🗃️ Database Management](#️-database-management)
-- [📦 Services Overview](#-services-overview)
+- [🗃️ Database Management](#-database-management)
 - [💡 Development Tips](#-development-tips)
+- [📋 Kubernetes Commands Cheat-Sheet](#-kubernetes-commands-cheat-sheet)
+- [🚀 Publishing Common to Maven Central](#-publishing-common-to-maven-central)
 - [🤝 Contributing](#-contributing)
 - [📄 License](#-license)
+- [🙏 Acknowledgements & References](#acknowledgements-references)
 
 ## 🎯 Overview
 
@@ -177,7 +192,7 @@ This project demonstrates a complete **microservices architecture** built with S
 This project implements a **microservices pattern** where different functionalities are broken down into independent services. These services communicate asynchronously via **Apache Kafka** and are managed through **Spring Cloud Gateway** and **Eureka Service Discovery**.
 
 ### Architecture Highlights:
-- 🌐 **API Gateway** as the single entry point
+- 🌐 **API Gateway** as the single entry point for application APIs (behind Envoy Gateway on Kubernetes)
 - 📋 **Service Registry** for dynamic service discovery
 - ⚙️ **Configuration Server** for centralized config management
 - 📨 **Event-driven communication** via Kafka
@@ -189,7 +204,7 @@ This project implements a **microservices pattern** where different functionalit
 
 | Service                  | Port  | Description                                  | Tech Stack                    |
 |--------------------------|-------|----------------------------------------------|-------------------------------|
-| 🌐 **API Gateway**       | 8765  | Single entry point, routing & load balancing | Spring Cloud Gateway          |
+| 🌐 **API Gateway**       | 8765  | Single application API entry point, routing & load balancing | Spring Cloud Gateway          |
 | 📁 **Config Server**     | 8888  | Centralized configuration management         | Spring Cloud Config           |
 | 🏢 **Service Registry**  | 8761  | Service discovery with Eureka                | Spring Cloud Netflix          |
 | 📚 **Catalog Service**   | 18080 | Product catalog management                   | PostgreSQL + Liquibase (YAML) |
@@ -239,9 +254,9 @@ graph TB
 <summary><strong>🖥️ Core Technologies</strong></summary>
 
 ### Languages & Frameworks
-* ![Java](https://img.shields.io/badge/Java-21+-orange?style=flat-square&logo=java) [Java 21+](https://www.java.com)
-* ![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.x-green?style=flat-square&logo=spring) [Spring Framework](https://spring.io/projects/spring-framework)
-* ![Spring Cloud](https://img.shields.io/badge/Spring_Cloud-2023.x-green?style=flat-square&logo=spring) [Spring Cloud](https://spring.io/projects/spring-cloud)
+* ![Java](https://img.shields.io/badge/Java-25+-orange?style=flat-square&logo=java) [Java 25+](https://www.java.com)
+* ![Spring Boot](https://img.shields.io/badge/Spring_Boot-4.1.2-green?style=flat-square&logo=spring) [Spring Framework](https://spring.io/projects/spring-framework)
+* ![Spring Cloud](https://img.shields.io/badge/Spring_Cloud-2025.1.4-green?style=flat-square&logo=spring) [Spring Cloud](https://spring.io/projects/spring-cloud)
 * ![Project Reactor](https://img.shields.io/badge/Project_Reactor-3.x-purple?style=flat-square) [Project Reactor](https://projectreactor.io/)
 
 </details>
@@ -252,7 +267,6 @@ graph TB
 ### Message Brokers & Streaming
 * ![Kafka](https://img.shields.io/badge/Apache_Kafka-Latest-black?style=flat-square&logo=apache-kafka) [Apache Kafka](http://kafka.apache.org/)
 * ![Kafka Streams](https://img.shields.io/badge/Kafka_Streams-Latest-black?style=flat-square) [Kafka Streams](https://kafka.apache.org/documentation/streams/)
-* ![Kafka REST](https://img.shields.io/badge/Kafka_REST-Latest-black?style=flat-square) [Kafka REST](https://github.com/confluentinc/kafka-rest)
 
 </details>
 
@@ -261,12 +275,11 @@ graph TB
 
 ### Databases
 * ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-blue?style=flat-square&logo=postgresql) [PostgreSQL](http://www.postgresql.org/)
-* ![MongoDB](https://img.shields.io/badge/MongoDB-6.x-green?style=flat-square&logo=mongodb) MongoDB
-* ![Redis](https://img.shields.io/badge/Redis-7.x-red?style=flat-square&logo=redis) [Redis](http://redis.io/)
+* ![Redis](https://img.shields.io/badge/Redis-7.x-red?style=flat-square&logo=redis) [Redis](http://redis.io/) (Caching)
 
 ### Database Tools
 * ![Liquibase](https://img.shields.io/badge/Liquibase-4.x-orange?style=flat-square) [Liquibase](https://www.liquibase.com)
-* ![Spring Data](https://img.shields.io/badge/Spring_Data-3.x-green?style=flat-square&logo=spring) [Spring Data](https://spring.io/projects/spring-data)
+* ![Spring Data](https://img.shields.io/badge/Spring_Data-4.x-green?style=flat-square&logo=spring) [Spring Data](https://spring.io/projects/spring-data)
 * ![jOOQ](https://img.shields.io/badge/jOOQ-3.x-blue?style=flat-square) [jOOQ](http://www.jooq.org)
 
 </details>
@@ -305,8 +318,6 @@ graph TB
 * ![Testcontainers](https://img.shields.io/badge/Testcontainers-Latest-blue?style=flat-square) Testcontainers
 
 </details>
-
-> 📋 For complete tech stack details, see [techstack.md](./techstack.md)
 
 ## 🚀 Quick Start
 
@@ -381,10 +392,12 @@ bash run.sh
 For a local Kubernetes deployment, use Kind with the manifests under
 [`deployment/k8s/`](deployment/k8s/). See the
 [Kubernetes Deployment Guide](deployment/KUBERNETES_DEPLOYMENT_GUIDE.md) for
-the complete setup and validation flow.
+the complete setup and validation flow. For production, see the
+[TLS and DNS prerequisites](deployment/KUBERNETES_DEPLOYMENT_GUIDE.md#deploying-the-production-overlay).
+
 
 ```bash
-./deployment/scripts/run-local-kubernetes-e2e.sh
+./deployment/k8s/run-k8s-e2e-local.sh
 ```
 
 The same Kubernetes end-to-end gate runs in
@@ -400,15 +413,17 @@ docker-compose -f deployment/docker-compose.yml down
 docker-compose -f deployment/docker-compose-tools.yml down
 ```
 
-### ✅ Verify Installation
+### ✅ Verify Installation (Docker Compose)
 
-Once all services are running, verify the setup:
+Once all services are running under Docker Compose, verify the setup:
 
 - 🌐 **Service Registry:** [http://localhost:8761](http://localhost:8761)
 - 📚 **API Documentation:** [http://localhost:8765/swagger-ui.html](http://localhost:8765/swagger-ui.html)
 - 🛒 **Retail Store App:** [http://localhost:8080](http://localhost:8080)
 - 📊 **Grafana Dashboard:** [http://localhost:3000](http://localhost:3000) (user/password)
 - 🔍 **Loki Tracing:** [http://localhost:3000](http://localhost:3000)
+
+*(Note: On Kubernetes, access services via the Gateway hostnames `retailstore.local`, `api.retailstore.local`, `keycloak.local`, and `jobrunr.local`)*
 
 ## 🎛️ Service Discovery & API Access
 
@@ -438,14 +453,14 @@ Access all microservice APIs through a unified interface:
 > See [KUBERNETES_DEPLOYMENT_GUIDE.md](deployment/KUBERNETES_DEPLOYMENT_GUIDE.md#terraform-managed-keycloak-realm-prod)
 > and the [ADR](docs/architecture/ADR-Keycloak-Terraform-Realm.md) for details.
 
-To fully access all features of the application (such as the Inventory UI), you must assign your user the `ADMIN` role. Follow these steps to correctly configure the role and ensure it is included in the OIDC tokens so Spring Security can map it:
+To fully access all features of the application (such as the Inventory UI or Prometheus/metrics actuator endpoints), users require the appropriate client roles (`ADMIN` or `OPERATOR`). When using the Terraform runner (`deployment/terraform/`), both roles are created and mapped automatically. If configuring manually:
 
-### 1. Create the ADMIN Client Role
+### 1. Create the ADMIN and OPERATOR Client Roles
 1. Open the Keycloak Admin Console (`http://localhost:9191`).
 2. Select the `retailstore` realm.
 3. Go to **Clients** -> click on **`retailstore-webapp`**.
 4. Go to the **Roles** tab and click **Create Role**.
-5. Name the role **`ADMIN`** and click **Save**.
+5. Name the role **`ADMIN`** (for application administration) or **`OPERATOR`** (for `/actuator/metrics` & `/actuator/prometheus` access) and click **Save**.
 
 ### 2. Map the Client Role to the ID Token
 By default, Keycloak only puts client roles inside the Access Token. To ensure the `retailstore-webapp` can see the role during login, we need to map it to the ID Token.
@@ -635,7 +650,7 @@ docker-compose logs | grep ERROR
 
 </details>
 
-## 📋 Kubernetes Commands Cheat‑Sheet
+## 📋 Kubernetes Commands Cheat-Sheet
 
 This guide provides a concise reference of useful `kubectl` commands for everyday debugging, maintenance, and inspection of the **retailstore** namespace used by this project. Each command includes a short description of when to use it.
 
@@ -721,12 +736,12 @@ sudo fuser -k 18080/tcp
 ### ⚠️ Important Notes & Best Practices
 
 <details>
-<summary><strong>🔄 Spring Boot 3.x Migration Notes</strong></summary>
+<summary><strong>🔄 Spring Boot 4.x Notes</strong></summary>
 
-- **📦 Jakarta EE Namespace:** Migration from `javax.*` to `jakarta.*`
-- **📊 Observability:** Spring Cloud Sleuth → Micrometer Tracing
-- **🔧 Configuration:** Updated property names and patterns
-- **🛡️ Security:** Enhanced OAuth2/OIDC integration
+- **📦 Jakarta EE Namespace:** Standardized on `jakarta.*` packages
+- **📊 Observability:** Uses Micrometer Tracing integrated with OpenTelemetry
+- **🔧 Configuration:** Updated property names and modern Spring Boot 4.x patterns
+- **🛡️ Security:** Modern OAuth2/OIDC integration with Keycloak
 
 </details>
 
@@ -770,6 +785,108 @@ cd gatling-tests
 ./mvnw gatling:test -P stress -DmaxUsers=100 -DrampDurationMinutes=5
 ```
 
+## 🚀 Publishing Common to Maven Central
+
+The shared `common` module can be published directly to Maven Central via Sonatype Central Portal.
+
+### Central Coordinates
+Artifacts are published under:
+- **Group ID:** `io.github.rajadilipkolli`
+- **Artifact ID:** `microservices-common`
+- **Dependency Coordinates:** `io.github.rajadilipkolli:microservices-common:<version>`
+
+### Release Triggers
+Maven Central publication is release-only and is triggered via GitHub Actions (`publish-common.yml`) when:
+- A Git release tag matching `common-v*` is pushed (e.g., `common-v0.0.1`), extracting the version from the tag.
+- The workflow is manually dispatched (`workflow_dispatch`) with a non-empty `release_version` input (e.g., `0.0.1`).
+
+### Prerequisites
+Before publishing to Maven Central:
+1. **Namespace Verification:** Ensure the `io.github.rajadilipkolli` namespace is registered and verified on the [Sonatype Central Portal](https://central.sonatype.com/).
+2. **GPG Key Distribution:** Ensure a GPG key pair has been generated and the public key has been published to a recognized public keyserver (e.g., `keyserver.ubuntu.com`, `keys.openpgp.org`).
+
+### Required GitHub Secrets & Setup Guide
+
+The following repository secrets must be configured in GitHub under **Settings → Secrets and variables → Actions → Repository secrets**:
+
+| Secret Name        | Description                            | Source                                                               |
+|--------------------|----------------------------------------|----------------------------------------------------------------------|
+| `CENTRAL_USERNAME` | Sonatype Central Portal token username | Generated in Central Portal user account                             |
+| `CENTRAL_PASSWORD` | Sonatype Central Portal token password | Generated in Central Portal user account                             |
+| `GPG_PRIVATE_KEY`  | ASCII-armored private GPG key          | Exported from local GPG keyring (`gpg --armor --export-secret-keys`) |
+| `GPG_PASSPHRASE`   | Passphrase for the GPG private key     | Chosen during GPG key generation                                     |
+
+#### 1. How to get `CENTRAL_USERNAME` and `CENTRAL_PASSWORD`
+Sonatype requires a **User Token** instead of your portal password:
+1. Log in to [Sonatype Central Portal](https://central.sonatype.com/) (sign in via GitHub).
+2. Ensure your namespace (e.g., `io.github.rajadilipkolli`) is verified under **Publishing → Namespaces** (verification is done by creating a temporary public GitHub repo with a generated name or via GitHub OAuth).
+3. Open the [User Tokens page](https://central.sonatype.com/usertoken).
+4. Click **Generate User Token**.
+5. Enter a display name and choose an expiration for the token.
+6. Copy the displayed credentials directly as plain text (**do not Base64 encode them**; Maven and `central-publishing-maven-plugin` handle authentication internally via `.github/settings.xml`):
+   - **Username** $\rightarrow$ save as `CENTRAL_USERNAME` secret in GitHub.
+   - **Password** $\rightarrow$ save the raw, plain token password as `CENTRAL_PASSWORD` secret in GitHub.
+   > ⚠️ **Save these credentials now:** They are displayed only once and cannot be retrieved after the dialog closes. Generate a replacement token if you lose them.
+
+   > ℹ️ **Note:** Base64 encoding (`username:password`) is only required when making direct HTTP REST API calls via `curl`. For Maven deployment via `settings.xml`, always use the raw/unencoded token strings.
+
+#### 2. How to get `GPG_PRIVATE_KEY` and `GPG_PASSPHRASE`
+Maven Central requires every release artifact and POM to be cryptographically signed with GPG, and the public key must be available on a public keyserver:
+
+1. **Generate a GPG key pair:**
+   ```bash
+   gpg --full-generate-key
+   ```
+   - Choose `(1) RSA and RSA` (default).
+   - Enter keysize: `4096`.
+   - Set validity (e.g., `0` for does not expire, or `2y`).
+   - Enter your name and email address.
+   - Enter a secure passphrase. **Remember this passphrase** $\rightarrow$ this is your `GPG_PASSPHRASE`.
+
+2. **Find your Key ID:**
+   ```bash
+   gpg --list-secret-keys --keyid-format LONG
+   ```
+   Sample output:
+   ```text
+   sec   rsa4096/3AA5C34371567BD2 2026-10-23 [SC]
+         E5D2A5A2B52B0301A8A3B22E3AA5C34371567BD2
+   uid                 [ultimate] Raja Kolli <rajakolli@gmail.com>
+   ```
+   In this example, the Key ID is `3AA5C34371567BD2` (the 16 characters after `rsa4096/`).
+
+3. **Publish your public key to public keyservers:**
+   Sonatype validates signatures against public keyservers. Send your public key to the major keyservers:
+   ```bash
+   gpg --keyserver keyserver.ubuntu.com --send-keys <YOUR_KEY_ID>
+   gpg --keyserver keys.openpgp.org --send-keys <YOUR_KEY_ID>
+   ```
+
+4. **Export your ASCII-armored private key:**
+   ```bash
+   gpg --armor --export-secret-keys <YOUR_KEY_ID>
+   ```
+   Copy the **entire** output including the header and footer:
+   ```text
+   -----BEGIN PGP PRIVATE KEY BLOCK-----
+
+   ... (key data) ...
+   -----END PGP PRIVATE KEY BLOCK-----
+   ```
+   Save this full text as the `GPG_PRIVATE_KEY` secret in GitHub.
+
+#### 3. Add Secrets to GitHub Repository
+1. Navigate to your repository on GitHub.
+2. Go to **Settings** $\rightarrow$ **Secrets and variables** $\rightarrow$ **Actions**.
+3. Under **Repository secrets**, click **New repository secret** and add each secret:
+   - `CENTRAL_USERNAME`
+   - `CENTRAL_PASSWORD`
+   - `GPG_PRIVATE_KEY`
+   - `GPG_PASSPHRASE`
+
+### Immutability Rule
+Artifacts published to Maven Central are immutable. Once a version is published, it cannot be modified or replaced. Any updates, fixes, or corrections must be published under a new version number.
+
 ## 🤝 Contributing
 
 We welcome contributions from the community! Here's how you can help:
@@ -785,11 +902,11 @@ We welcome contributions from the community! Here's how you can help:
 
 ### 📋 Contribution Guidelines
 
-- 📖 **Documentation:** Update documentation for any new features
+- 📖 **Documentation:** Update documentation for any new features. Please refer to the [Specification-Driven Development (SDD) Guide](docs/sdd/README.md) for service specifications and architectural standards.
 - 🧪 **Testing:** Add tests for new functionality
 - 🎨 **Code Style:** Follow existing code conventions
 - 💬 **Discussion:** Open an issue first for significant changes
-- 🏗️ **Kafka Event Contract:** Kafka event DTOs are resolved by explicit consumer-side typing (`JsonSerde<T>` / manual `readValue(..., Dto.class)`), not by the `type`/`__TypeId__` header. Producers must not add type headers.
+- 🏗️ **Kafka Event Contract:** Kafka event DTOs are resolved by explicit consumer-side typing (`JacksonJsonSerde<T>` / manual `readValue(..., Dto.class)`), not by the `type`/`__TypeId__` header. Producers must not add type headers.
 
 ### 🤗 Community Standards
 

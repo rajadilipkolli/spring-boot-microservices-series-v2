@@ -1,0 +1,311 @@
+name: Publish Common Library
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'common/**'
+
+  pull_request:
+    paths:
+      - 'common/**'
+
+permissions:
+  contents: read
+
+# Serialize releases so two runs cannot publish the same version.
+concurrency:
+  group: publish-common-main
+  cancel-in-progress: false
+
+jobs:
+  build-and-test:
+    name: Build and Verify Common
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Set up Java 25
+        uses: actions/setup-java@v6
+        with:
+          java-version: '25'
+          distribution: temurin
+          cache: maven
+
+      - name: Verify Spotless and Compile
+        run: ./mvnw -B -pl common clean test spotless:check
+
+  native-test:
+    name: Native Test Common
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Set up GraalVM
+        uses: graalvm/setup-graalvm@60e76998d25690099182b796e99b8804da582d90
+        with:
+          distribution: graalvm
+          java-version: '25'
+          cache: maven
+
+      - name: Run Native Tests
+        run: ./mvnw -B -pl common -PnativeTest test
+
+  release-version:
+    name: Calculate Release Version
+    needs:
+      - build-and-test
+      - native-test
+
+    if: >-
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
+      !contains(github.event.head_commit.message, '[skip common release]')
+
+    runs-on: ubuntu-latest
+
+    outputs:
+      release_version: ${{ steps.version.outputs.release_version }}
+      next_version: ${{ steps.version.outputs.next_version }}
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Set up Java 25
+        uses: actions/setup-java@v6
+        with:
+          java-version: '25'
+          distribution: temurin
+          cache: maven
+
+      - name: Calculate Release and Next Snapshot Versions
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          CURRENT_VERSION="$(
+            ./mvnw -q -f common/pom.xml \
+              help:evaluate \
+              -Dexpression=project.version \
+              -DforceStdout
+          )"
+
+          if [[ ! "$CURRENT_VERSION" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)-SNAPSHOT$ ]]; then
+            echo "Expected common/pom.xml to use MAJOR.MINOR.PATCH-SNAPSHOT."
+            echo "Actual version: $CURRENT_VERSION"
+            exit 1
+          fi
+
+          MAJOR="${BASH_REMATCH[1]}"
+          MINOR="${BASH_REMATCH[2]}"
+          PATCH="${BASH_REMATCH[3]}"
+
+          RELEASE_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+          NEXT_VERSION="${MAJOR}.${MINOR}.$((PATCH + 1))-SNAPSHOT"
+          TAG_NAME="common-v${RELEASE_VERSION}"
+
+          echo "Current version: $CURRENT_VERSION"
+          echo "Release version: $RELEASE_VERSION"
+          echo "Next version: $NEXT_VERSION"
+
+          if git ls-remote --exit-code --tags origin \
+            "refs/tags/${TAG_NAME}" >/dev/null 2>&1; then
+            echo "Release tag already exists: $TAG_NAME"
+            exit 1
+          fi
+
+          {
+            echo "release_version=$RELEASE_VERSION"
+            echo "next_version=$NEXT_VERSION"
+          } >> "$GITHUB_OUTPUT"
+
+  publish-github:
+    name: Publish to GitHub Packages
+    needs: release-version
+
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+
+      - name: Set up Java 25
+        uses: actions/setup-java@v6
+        with:
+          java-version: '25'
+          distribution: temurin
+          server-id: github
+          cache: maven
+
+      - name: Set Release Version
+        env:
+          RELEASE_VERSION: ${{ needs.release-version.outputs.release_version }}
+        run: |
+          set -euo pipefail
+
+          ./mvnw -B -pl common versions:set \
+            -DnewVersion="$RELEASE_VERSION" \
+            -Daether.remoteRepositoryFilter.prefixes=false \
+            -DgenerateBackupPoms=false
+
+      - name: Deploy Common to GitHub Packages
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          ./mvnw -B -pl common deploy \
+            -s .github/settings.xml \
+            -Daether.remoteRepositoryFilter.prefixes=false \
+            -DskipTests
+
+  publish-central:
+    name: Publish to Maven Central
+    needs: release-version
+
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+
+      - name: Verify Maven Central and GPG Secrets
+        env:
+          CENTRAL_USERNAME: ${{ secrets.CENTRAL_USERNAME }}
+          CENTRAL_PASSWORD: ${{ secrets.CENTRAL_PASSWORD }}
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+
+          for name in CENTRAL_USERNAME CENTRAL_PASSWORD \
+                      GPG_PRIVATE_KEY GPG_PASSPHRASE; do
+            if [[ -z "${!name}" ]]; then
+              echo "Required secret $name is missing."
+              exit 1
+            fi
+          done
+
+      - name: Set up Java 25 and GPG
+        uses: actions/setup-java@v6
+        with:
+          java-version: '25'
+          distribution: temurin
+          cache: maven
+          gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
+
+      - name: Set Release Version
+        env:
+          RELEASE_VERSION: ${{ needs.release-version.outputs.release_version }}
+        run: |
+          set -euo pipefail
+
+          ./mvnw -B -pl common versions:set \
+            -DnewVersion="$RELEASE_VERSION" \
+            -Daether.remoteRepositoryFilter.prefixes=false \
+            -DgenerateBackupPoms=false
+
+      - name: Deploy Common to Maven Central
+        env:
+          CENTRAL_USERNAME: ${{ secrets.CENTRAL_USERNAME }}
+          CENTRAL_PASSWORD: ${{ secrets.CENTRAL_PASSWORD }}
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+
+          ./mvnw -B -pl common deploy \
+            -Prelease \
+            -s .github/settings.xml \
+            -Daether.remoteRepositoryFilter.prefixes=false \
+            -DskipTests
+
+  finalize-release:
+    name: Tag Release and Bump Snapshot
+    needs:
+      - release-version
+      - publish-github
+      - publish-central
+
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Main
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Set up Java 25
+        uses: actions/setup-java@v6
+        with:
+          java-version: '25'
+          distribution: temurin
+          cache: maven
+
+      - name: Tag Release and Bump Snapshot Version
+        env:
+          RELEASE_VERSION: ${{ needs.release-version.outputs.release_version }}
+          NEXT_VERSION: ${{ needs.release-version.outputs.next_version }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          TAG_NAME="common-v${RELEASE_VERSION}"
+
+          # Do not overwrite an existing release tag.
+          if git ls-remote --exit-code --tags origin \
+            "refs/tags/${TAG_NAME}" >/dev/null 2>&1; then
+            echo "Release tag already exists: $TAG_NAME"
+            exit 1
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email \
+            "github-actions[bot]@users.noreply.github.com"
+
+          # Prepare the next development version.
+          ./mvnw -B -pl common versions:set \
+            -DnewVersion="$NEXT_VERSION" \
+            -Daether.remoteRepositoryFilter.prefixes=false \
+            -DgenerateBackupPoms=false
+
+          git add common/pom.xml
+
+          if git diff --cached --quiet; then
+            echo "No POM changes to commit."
+            exit 1
+          fi
+
+          # Record the release against the source commit.
+          git tag -a "$TAG_NAME" -m "Release $TAG_NAME"
+          git push origin "$TAG_NAME"
+
+          git commit -m \
+            "chore(common): bump development version to ${NEXT_VERSION} [skip common release]"
+
+          git push origin HEAD:main

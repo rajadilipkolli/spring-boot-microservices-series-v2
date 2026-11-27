@@ -17,9 +17,13 @@ resources:
 - payment-service.yaml
 - api-gateway.yaml
 - retail-store-webapp.yaml
-- ingress.yaml
+- envoy-proxy.yaml
+- gateway-class.yaml
+- gateway.yaml
+- http-routes.yaml
+- jobrunr-security-policy.yaml
+- backend-traffic-policy.yaml
 - patch-job.yaml
 - network-policies.yaml
 - pdb.yaml
-- internal-ingress.yaml
 - keycloak-terraform-job.yaml

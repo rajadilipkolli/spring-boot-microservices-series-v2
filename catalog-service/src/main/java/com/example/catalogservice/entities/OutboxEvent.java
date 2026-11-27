@@ -33,6 +33,7 @@ public class OutboxEvent implements Persistable<UUID> {
 
     private OffsetDateTime createdAt;
 
+    // Terminal processing time for PUBLISHED or FAILED events.
     private OffsetDateTime processedAt;
 
     private int retryCount;

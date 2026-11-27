@@ -1,0 +1,5 @@
+com.example.common.config.CommonLoggingAutoConfiguration
+com.example.common.config.CommonWebAutoConfiguration
+com.example.common.config.CommonReactiveWebAutoConfiguration
+com.example.common.idempotency.IdempotencyAutoConfiguration
+com.example.common.kafka.dlt.DltAutoConfiguration

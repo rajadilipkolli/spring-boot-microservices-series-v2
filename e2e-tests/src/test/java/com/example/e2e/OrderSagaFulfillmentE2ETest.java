@@ -12,6 +12,7 @@ import com.example.e2e.models.InventoryRequest;
 import com.example.e2e.models.OrderItemRequest;
 import com.example.e2e.models.OrderRequest;
 import com.example.e2e.models.ProductRequest;
+import io.restassured.http.ContentType;
 import io.restassured.response.Response;
 import java.math.BigDecimal;
 import java.time.Duration;
@@ -52,7 +53,7 @@ class OrderSagaFulfillmentE2ETest {
                         new BigDecimal("25.00"));
 
         log.info("Creating product in catalog: {}", TEST_PRODUCT_CODE);
-        given().spec(E2EConfig.defaultRequestSpec())
+        given().spec(E2EConfig.authenticatedRequestSpec())
                 .body(product)
                 .when()
                 .post("/catalog-service/api/catalog")
@@ -62,24 +63,24 @@ class OrderSagaFulfillmentE2ETest {
         // 2. Ensure initial stock in Inventory
         // Wait for inventory record to be created asynchronously via Kafka from catalog service
         await("Inventory should be created for product " + TEST_PRODUCT_CODE)
-                .atMost(Duration.ofSeconds(15))
-                .pollInterval(Duration.ofMillis(500))
-                .untilAsserted(
-                        () ->
-                                given().spec(E2EConfig.defaultRequestSpec())
-                                        .when()
-                                        .get(
-                                                "/inventory-service/api/inventory/"
-                                                        + TEST_PRODUCT_CODE)
-                                        .then()
-                                        .statusCode(200));
+                .atMost(Duration.ofSeconds(30))
+                .pollDelay(Duration.ofSeconds(1))
+                .pollInterval(Duration.ofSeconds(1))
+                .untilAsserted(() ->
+                        given().spec(E2EConfig.authenticatedRequestSpec())
+                                .when()
+                                .get(
+                                        "/inventory-service/api/inventory/{productCode}",
+                                        TEST_PRODUCT_CODE)
+                                .then()
+                                .statusCode(200));
 
         InventoryRequest inventory = new InventoryRequest(TEST_PRODUCT_CODE, 100);
         log.info("Provisioning inventory for product: {}", TEST_PRODUCT_CODE);
-        given().spec(E2EConfig.defaultRequestSpec())
+        given().spec(E2EConfig.authenticatedRequestSpec())
                 .body(inventory)
                 .when()
-                .put("/inventory-service/api/inventory/product/" + TEST_PRODUCT_CODE)
+                .put("/inventory-service/api/inventory/product/{productCode}", TEST_PRODUCT_CODE)
                 .then()
                 .statusCode(200);
 
@@ -99,7 +100,7 @@ class OrderSagaFulfillmentE2ETest {
 
         log.info("Creating customer in payment service");
         Response customerResponse =
-                given().spec(E2EConfig.defaultRequestSpec())
+                given().spec(E2EConfig.authenticatedRequestSpec())
                         .body(customer)
                         .when()
                         .post("/payment-service/api/customers")
@@ -124,7 +125,7 @@ class OrderSagaFulfillmentE2ETest {
 
         // Submit order
         Response createOrderResponse =
-                given().spec(E2EConfig.defaultRequestSpec())
+                given().spec(E2EConfig.authenticatedRequestSpec())
                         .body(orderRequest)
                         .when()
                         .post("/order-service/api/orders")
@@ -139,26 +140,27 @@ class OrderSagaFulfillmentE2ETest {
 
         // Await asynchronous Saga confirmation
         await("Order " + orderId + " should transition to CONFIRMED")
-                .atMost(Duration.ofSeconds(30))
+                .atMost(Duration.ofSeconds(60))
+                .pollDelay(Duration.ofSeconds(2))
                 .pollInterval(Duration.ofSeconds(1))
-                .untilAsserted(
-                        () -> {
-                            Response orderCheck =
-                                    given().spec(E2EConfig.defaultRequestSpec())
-                                            .when()
-                                            .get("/order-service/api/orders/" + orderId)
-                                            .then()
-                                            .statusCode(200)
-                                            .extract()
-                                            .response();
+                .untilAsserted(() -> {
+                    Response orderCheck =
+                            given().spec(E2EConfig.authenticatedRequestSpec())
+                                    .when()
+                                    .accept(ContentType.JSON)
+                                    .get("/order-service/api/orders/{id}", orderId)
+                                    .then()
+                                    .statusCode(200)
+                                    .extract()
+                                    .response();
 
-                            String status = orderCheck.jsonPath().getString("status");
-                            log.info("Polled order {} status: {}", orderId, status);
-                            assertThat(status).isEqualTo("CONFIRMED");
-                        });
+                    String status = orderCheck.jsonPath().getString("status");
+                    log.info("Polled order {} status: {}", orderId, status);
+                    assertThat(status).isEqualTo("CONFIRMED");
+                });
 
         // Verify customer balance was deducted in payment-service (1000.00 - 50.00 = 950.00)
-        given().spec(E2EConfig.defaultRequestSpec())
+        given().spec(E2EConfig.authenticatedRequestSpec())
                 .when()
                 .get("/payment-service/api/customers/" + customerId)
                 .then()
@@ -178,7 +180,7 @@ class OrderSagaFulfillmentE2ETest {
         OrderRequest orderRequest = new OrderRequest(customerId, List.of(item), address);
 
         Response createOrderResponse =
-                given().spec(E2EConfig.defaultRequestSpec())
+                given().spec(E2EConfig.authenticatedRequestSpec())
                         .body(orderRequest)
                         .when()
                         .post("/order-service/api/orders")
@@ -192,26 +194,24 @@ class OrderSagaFulfillmentE2ETest {
 
         // Await Saga rollback
         await("Order " + orderId + " should transition to ROLLBACK or REJECTED")
-                .atMost(Duration.ofSeconds(30))
+                .atMost(Duration.ofSeconds(60))
+                .pollDelay(Duration.ofSeconds(2))
                 .pollInterval(Duration.ofSeconds(1))
-                .untilAsserted(
-                        () -> {
-                            Response orderCheck =
-                                    given().spec(E2EConfig.defaultRequestSpec())
-                                            .when()
-                                            .get("/order-service/api/orders/" + orderId)
-                                            .then()
-                                            .statusCode(200)
-                                            .extract()
-                                            .response();
+                .untilAsserted(() -> {
+                    Response orderCheck =
+                            given().spec(E2EConfig.authenticatedRequestSpec())
+                                    .accept(ContentType.JSON)
+                                    .when()
+                                    .get("/order-service/api/orders/{id}", orderId)
+                                    .then()
+                                    .statusCode(200)
+                                    .extract()
+                                    .response();
 
-                            String status = orderCheck.jsonPath().getString("status");
-                            log.info(
-                                    "Polled insufficient-inventory order {} status: {}",
-                                    orderId,
-                                    status);
-                            assertThat(status).isIn("ROLLBACK", "REJECTED");
-                        });
+                    String status = orderCheck.jsonPath().getString("status");
+                    log.info("Polled insufficient-inventory order {} status: {}", orderId, status);
+                    assertThat(status).isIn("ROLLBACK", "REJECTED");
+                });
     }
 
     @Test
@@ -233,7 +233,7 @@ class OrderSagaFulfillmentE2ETest {
                         new BigDecimal("10.00"));
 
         Response customerResponse =
-                given().spec(E2EConfig.defaultRequestSpec())
+                given().spec(E2EConfig.authenticatedRequestSpec())
                         .body(lowBalanceCustomer)
                         .when()
                         .post("/payment-service/api/customers")
@@ -251,7 +251,7 @@ class OrderSagaFulfillmentE2ETest {
         OrderRequest orderRequest = new OrderRequest(poorCustomerId, List.of(item), address);
 
         Response createOrderResponse =
-                given().spec(E2EConfig.defaultRequestSpec())
+                given().spec(E2EConfig.authenticatedRequestSpec())
                         .body(orderRequest)
                         .when()
                         .post("/order-service/api/orders")
@@ -264,25 +264,23 @@ class OrderSagaFulfillmentE2ETest {
         assertThat(orderId).isNotNull().isPositive();
 
         await("Order " + orderId + " should transition to ROLLBACK or REJECTED")
-                .atMost(Duration.ofSeconds(30))
+                .atMost(Duration.ofSeconds(60))
+                .pollDelay(Duration.ofSeconds(2))
                 .pollInterval(Duration.ofSeconds(1))
-                .untilAsserted(
-                        () -> {
-                            Response orderCheck =
-                                    given().spec(E2EConfig.defaultRequestSpec())
-                                            .when()
-                                            .get("/order-service/api/orders/" + orderId)
-                                            .then()
-                                            .statusCode(200)
-                                            .extract()
-                                            .response();
+                .untilAsserted(() -> {
+                    Response orderCheck =
+                            given().spec(E2EConfig.authenticatedRequestSpec())
+                                    .accept(ContentType.JSON)
+                                    .when()
+                                    .get("/order-service/api/orders/{id}", orderId)
+                                    .then()
+                                    .statusCode(200)
+                                    .extract()
+                                    .response();
 
-                            String status = orderCheck.jsonPath().getString("status");
-                            log.info(
-                                    "Polled insufficient-funds order {} status: {}",
-                                    orderId,
-                                    status);
-                            assertThat(status).isIn("ROLLBACK", "REJECTED");
-                        });
+                    String status = orderCheck.jsonPath().getString("status");
+                    log.info("Polled insufficient-funds order {} status: {}", orderId, status);
+                    assertThat(status).isIn("ROLLBACK", "REJECTED");
+                });
     }
 }

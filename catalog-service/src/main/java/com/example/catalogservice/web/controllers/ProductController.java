@@ -6,17 +6,16 @@
 
 package com.example.catalogservice.web.controllers;
 
-import com.example.catalogservice.config.logging.Loggable;
 import com.example.catalogservice.exception.ProductNotFoundException;
 import com.example.catalogservice.model.request.ProductRequest;
-import com.example.catalogservice.model.response.PagedResult;
+import com.example.catalogservice.model.response.ProductExistsResponse;
 import com.example.catalogservice.model.response.ProductResponse;
 import com.example.catalogservice.services.ProductService;
 import com.example.catalogservice.utils.AppConstants;
 import com.example.catalogservice.web.api.ProductApi;
+import com.example.common.dto.PagedResult;
+import com.example.common.logging.Loggable;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
 import java.math.BigDecimal;
 import java.net.URI;
 import java.time.Duration;
@@ -30,7 +29,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -49,6 +47,7 @@ public class ProductController implements ProductApi {
     }
 
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
+    @Override
     public Mono<PagedResult<ProductResponse>> getAllProducts(
             @RequestParam(defaultValue = AppConstants.DEFAULT_PAGE_NUMBER, required = false)
                     int pageNo,
@@ -66,11 +65,13 @@ public class ProductController implements ProductApi {
     //  @CircuitBreaker(name = "default", fallbackMethod = "hardcodedResponse")
     //  @RateLimiter(name="default")
     //  @Bulkhead(name = "product-api")
+    @Override
     public Mono<ResponseEntity<ProductResponse>> getProductById(@PathVariable Long id) {
         return productService.findProductById(id).map(ResponseEntity::ok);
     }
 
     @GetMapping(value = "/product-code/{productCode}", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Override
     public Mono<ResponseEntity<ProductResponse>> getProductByProductCode(
             @PathVariable String productCode,
             @RequestParam(required = false) Boolean fetchInStock,
@@ -84,6 +85,7 @@ public class ProductController implements ProductApi {
     }
 
     @GetMapping(value = "/exists", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Override
     public Mono<ResponseEntity<ProductExistsResponse>> productExistsByProductCodes(
             @RequestParam List<String> productCodes) {
         return productService
@@ -91,54 +93,47 @@ public class ProductController implements ProductApi {
                 .map(exists -> ResponseEntity.ok(new ProductExistsResponse(exists)));
     }
 
-    @PostMapping(value = "/generate", produces = MediaType.APPLICATION_JSON_VALUE)
-    public Mono<GenerateProductsResponse> createRandomProducts(
-            @RequestHeader(name = "Idempotency-Key") String idempotencyKey,
-            @RequestParam(required = false) @Min(1) @Max(ProductService.MAX_GENERATION_BATCH_SIZE) Integer batchSize) {
-        return productService
-                .generateProducts(idempotencyKey, batchSize)
-                .map(GenerateProductsResponse::new);
-    }
-
     @PostMapping(
             consumes = MediaType.APPLICATION_JSON_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE)
+    @Override
     public Mono<ResponseEntity<ProductResponse>> createProduct(
             @RequestBody @Valid ProductRequest productRequest) {
         return productService
                 .saveProduct(productRequest)
-                .map(
-                        productResponse -> {
-                            URI location = URI.create("/api/catalog/id/" + productResponse.id());
-                            return ResponseEntity.created(location).body(productResponse);
-                        });
+                .map(productResponse -> {
+                    URI location = URI.create("/api/catalog/id/" + productResponse.id());
+                    return ResponseEntity.created(location).body(productResponse);
+                });
     }
 
+    /**
+     * Updates a product and returns its saved details. Service errors propagate.
+     *
+     * @return HTTP 200 with the updated product, or ProductNotFoundException as an error if absent
+     */
     @PutMapping(
             value = "/{id}",
             consumes = MediaType.APPLICATION_JSON_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE)
+    @Override
     public Mono<ResponseEntity<ProductResponse>> updateProduct(
             @PathVariable Long id, @RequestBody @Valid ProductRequest productRequest) {
         return productService
-                .findById(id)
-                .flatMap(
-                        product ->
-                                productService
-                                        .updateProduct(productRequest, product)
-                                        .map(ResponseEntity::ok))
+                .updateProduct(id, productRequest)
+                .map(ResponseEntity::ok)
                 .switchIfEmpty(Mono.error(new ProductNotFoundException(id)));
     }
 
     @DeleteMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Override
     public Mono<ResponseEntity<ProductResponse>> deleteProduct(@PathVariable Long id) {
         return productService
                 .findByIdWithMapping(id)
-                .flatMap(
-                        product ->
-                                productService
-                                        .deleteProductById(id)
-                                        .then(Mono.just(ResponseEntity.ok(product))))
+                .flatMap(product ->
+                        productService
+                                .deleteProductById(id)
+                                .then(Mono.just(ResponseEntity.ok(product))))
                 .switchIfEmpty(Mono.just(ResponseEntity.notFound().build()));
     }
 
@@ -190,8 +185,4 @@ public class ProductController implements ProductApi {
         // If no specific search criteria provided, return all products
         return productService.findAllProducts(pageNo, pageSize, sortBy, sortDir);
     }
-
-    public record ProductExistsResponse(boolean exists) {}
-
-    public record GenerateProductsResponse(boolean success) {}
 }

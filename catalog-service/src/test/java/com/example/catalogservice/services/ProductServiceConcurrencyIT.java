@@ -89,32 +89,33 @@ class ProductServiceConcurrencyIT extends AbstractIntegrationTest {
 
         // When: Using the service to save a product with the same code
         StepVerifier.create(productService.saveProduct(duplicateRequest))
-                .assertNext(
-                        response -> {
-                            // Then: Should return the existing product
-                            assertThat(response).isNotNull();
-                            assertThat(response.productCode()).isEqualTo(TEST_PRODUCT_CODE);
-                            // Should have the original product details, not the updated ones
-                            assertThat(response.productName()).isEqualTo("Test Product");
-                            assertThat(response.price()).isEqualByComparingTo(BigDecimal.TEN);
-                        })
+                .assertNext(response -> {
+                    // Then: Should return the existing product
+                    assertThat(response).isNotNull();
+                    assertThat(response.productCode()).isEqualTo(TEST_PRODUCT_CODE);
+                    // Should have the original product details, not the updated ones
+                    assertThat(response.productName()).isEqualTo("Test Product");
+                    assertThat(response.price()).isEqualByComparingTo(BigDecimal.TEN);
+                })
                 .verifyComplete();
 
         // Then: Only one product with this code should exist in DB using StepVerifier
-        StepVerifier.create(productRepository.countByProductCodeAllIgnoreCase(TEST_PRODUCT_CODE))
+        StepVerifier.create(
+                        productRepository.countByProductCodeAllIgnoreCaseAndDeletedFalse(
+                                TEST_PRODUCT_CODE))
                 .expectNext(1L)
                 .verifyComplete();
 
         // Verify the product was saved correctly using StepVerifier and has the original values
-        StepVerifier.create(productRepository.findByProductCodeAllIgnoreCase(TEST_PRODUCT_CODE))
-                .assertNext(
-                        savedProduct -> {
-                            assertThat(savedProduct).isNotNull();
-                            assertThat(savedProduct.getProductCode()).isEqualTo(TEST_PRODUCT_CODE);
-                            assertThat(savedProduct.getProductName()).isEqualTo("Test Product");
-                            assertThat(savedProduct.getPrice())
-                                    .isEqualByComparingTo(BigDecimal.TEN);
-                        })
+        StepVerifier.create(
+                        productRepository.findByProductCodeAllIgnoreCaseAndDeletedFalse(
+                                TEST_PRODUCT_CODE))
+                .assertNext(savedProduct -> {
+                    assertThat(savedProduct).isNotNull();
+                    assertThat(savedProduct.getProductCode()).isEqualTo(TEST_PRODUCT_CODE);
+                    assertThat(savedProduct.getProductName()).isEqualTo("Test Product");
+                    assertThat(savedProduct.getPrice()).isEqualByComparingTo(BigDecimal.TEN);
+                })
                 .verifyComplete();
     }
 
@@ -138,21 +139,19 @@ class ProductServiceConcurrencyIT extends AbstractIntegrationTest {
 
         // Use StepVerifier to save the product and get the response
         StepVerifier.create(productRepository.save(product))
-                .assertNext(
-                        savedEntity -> {
-                            assertThat(savedEntity.getId()).isNotNull();
-                            assertThat(savedEntity.getProductCode()).isEqualTo(TEST_PRODUCT_CODE);
-                        })
+                .assertNext(savedEntity -> {
+                    assertThat(savedEntity.getId()).isNotNull();
+                    assertThat(savedEntity.getProductCode()).isEqualTo(TEST_PRODUCT_CODE);
+                })
                 .verifyComplete();
 
         // When: Saving the same product again
         // Then: Should return the existing product without exceptions
         StepVerifier.create(productService.saveProduct(productRequest))
-                .assertNext(
-                        response -> {
-                            assertThat(response).isNotNull();
-                            assertThat(response.productCode()).isEqualTo(TEST_PRODUCT_CODE);
-                        })
+                .assertNext(response -> {
+                    assertThat(response).isNotNull();
+                    assertThat(response.productCode()).isEqualTo(TEST_PRODUCT_CODE);
+                })
                 .verifyComplete();
     }
 
@@ -183,28 +182,25 @@ class ProductServiceConcurrencyIT extends AbstractIntegrationTest {
         // This simulates what happens internally when a DuplicateKeyException occurs
         // from two threads trying to save the same product code at the same time
         Mono<ProductResponse> conflictingOperation =
-                Mono.defer(
-                        () -> {
-                            // First, save the original product successfully
-                            return productRepository
-                                    .save(
-                                            new Product()
-                                                    .setId(TSID.fast().toLong())
-                                                    .setNew(true)
-                                                    .setProductCode(TEST_PRODUCT_CODE_3)
-                                                    .setProductName("Original Product")
-                                                    .setDescription("Original Product Description")
-                                                    .setPrice(BigDecimal.valueOf(20.0)))
-                                    .flatMap(
-                                            savedProduct -> {
-                                                // Now try to save the conflicting product with the
-                                                // same code
-                                                // This should result in a DuplicateKeyException
-                                                // which the service handles
-                                                return productService.saveProduct(
-                                                        conflictingProduct);
-                                            });
-                        });
+                Mono.defer(() -> {
+                    // First, save the original product successfully
+                    return productRepository
+                            .save(
+                                    new Product()
+                                            .setId(TSID.fast().toLong())
+                                            .setNew(true)
+                                            .setProductCode(TEST_PRODUCT_CODE_3)
+                                            .setProductName("Original Product")
+                                            .setDescription("Original Product Description")
+                                            .setPrice(BigDecimal.valueOf(20.0)))
+                            .flatMap(savedProduct -> {
+                                // Now try to save the conflicting product with the
+                                // same code
+                                // This should result in a DuplicateKeyException
+                                // which the service handles
+                                return productService.saveProduct(conflictingProduct);
+                            });
+                });
 
         // Test the exception directly for validation
         ProductAlreadyExistsException exception =
@@ -228,23 +224,23 @@ class ProductServiceConcurrencyIT extends AbstractIntegrationTest {
 
         // Execute the operation and verify the behavior
         StepVerifier.create(conflictingOperation)
-                .assertNext(
-                        response -> {
-                            // Even though we tried to save conflictingProduct, we should get
-                            // the original product back due to the conflict resolution
-                            assertThat(response).isNotNull();
-                            assertThat(response.productCode()).isEqualTo(TEST_PRODUCT_CODE_3);
+                .assertNext(response -> {
+                    // Even though we tried to save conflictingProduct, we should get
+                    // the original product back due to the conflict resolution
+                    assertThat(response).isNotNull();
+                    assertThat(response.productCode()).isEqualTo(TEST_PRODUCT_CODE_3);
 
-                            // The product should have the original name, not the conflicting one
-                            // because the first one wins in a race condition
-                            assertThat(response.productName()).isEqualTo("Original Product");
-                            assertThat(response.price())
-                                    .isEqualByComparingTo(BigDecimal.valueOf(20.0));
-                        })
+                    // The product should have the original name, not the conflicting one
+                    // because the first one wins in a race condition
+                    assertThat(response.productName()).isEqualTo("Original Product");
+                    assertThat(response.price()).isEqualByComparingTo(BigDecimal.valueOf(20.0));
+                })
                 .verifyComplete();
 
         // Verify only one product was actually saved in the database
-        StepVerifier.create(productRepository.countByProductCodeAllIgnoreCase(TEST_PRODUCT_CODE_3))
+        StepVerifier.create(
+                        productRepository.countByProductCodeAllIgnoreCaseAndDeletedFalse(
+                                TEST_PRODUCT_CODE_3))
                 .assertNext(count -> assertThat(count).isEqualTo(1L))
                 .verifyComplete(); // Now create a more intense race condition with multiple
         // concurrent save attempts
@@ -295,46 +291,47 @@ class ProductServiceConcurrencyIT extends AbstractIntegrationTest {
                                 productService.saveProduct(request3),
                                 productService.saveProduct(request4),
                                 productService.saveProduct(request5)))
-                .assertNext(
-                        tuple -> {
-                            // All responses should be the same product
-                            var response1 = tuple.getT1();
-                            var response2 = tuple.getT2();
-                            var response3 = tuple.getT3();
-                            var response4 = tuple.getT4();
-                            var response5 = tuple.getT5();
+                .assertNext(tuple -> {
+                    // All responses should be the same product
+                    var response1 = tuple.getT1();
+                    var response2 = tuple.getT2();
+                    var response3 = tuple.getT3();
+                    var response4 = tuple.getT4();
+                    var response5 = tuple.getT5();
 
-                            // All results should have same product code
-                            assertThat(response1.productCode()).isEqualTo(TEST_PRODUCT_CODE_3);
-                            assertThat(response2.productCode()).isEqualTo(TEST_PRODUCT_CODE_3);
-                            assertThat(response3.productCode()).isEqualTo(TEST_PRODUCT_CODE_3);
-                            assertThat(response4.productCode()).isEqualTo(TEST_PRODUCT_CODE_3);
-                            assertThat(response5.productCode()).isEqualTo(TEST_PRODUCT_CODE_3);
+                    // All results should have same product code
+                    assertThat(response1.productCode()).isEqualTo(TEST_PRODUCT_CODE_3);
+                    assertThat(response2.productCode()).isEqualTo(TEST_PRODUCT_CODE_3);
+                    assertThat(response3.productCode()).isEqualTo(TEST_PRODUCT_CODE_3);
+                    assertThat(response4.productCode()).isEqualTo(TEST_PRODUCT_CODE_3);
+                    assertThat(response5.productCode()).isEqualTo(TEST_PRODUCT_CODE_3);
 
-                            // All responses should match the first one that succeeded
-                            assertThat(response2.productName()).isEqualTo(response1.productName());
-                            assertThat(response3.productName()).isEqualTo(response1.productName());
-                            assertThat(response4.productName()).isEqualTo(response1.productName());
-                            assertThat(response5.productName()).isEqualTo(response1.productName());
-                        })
+                    // All responses should match the first one that succeeded
+                    assertThat(response2.productName()).isEqualTo(response1.productName());
+                    assertThat(response3.productName()).isEqualTo(response1.productName());
+                    assertThat(response4.productName()).isEqualTo(response1.productName());
+                    assertThat(response5.productName()).isEqualTo(response1.productName());
+                })
                 .verifyComplete();
 
         // Final verification that only one product exists with this code
-        StepVerifier.create(productRepository.countByProductCodeAllIgnoreCase(TEST_PRODUCT_CODE_3))
+        StepVerifier.create(
+                        productRepository.countByProductCodeAllIgnoreCaseAndDeletedFalse(
+                                TEST_PRODUCT_CODE_3))
                 .assertNext(count -> assertThat(count).isEqualTo(1L))
                 .verifyComplete();
 
         // Verify the product in the database matches what we expect
-        StepVerifier.create(productRepository.findByProductCodeAllIgnoreCase(TEST_PRODUCT_CODE_3))
-                .assertNext(
-                        product -> {
-                            assertThat(product).isNotNull();
-                            assertThat(product.getProductCode()).isEqualTo(TEST_PRODUCT_CODE_3);
-                            // Should still be the original product as it was saved first
-                            assertThat(product.getProductName()).isEqualTo("Original Product");
-                            assertThat(product.getPrice())
-                                    .isEqualByComparingTo(BigDecimal.valueOf(20.0));
-                        })
+        StepVerifier.create(
+                        productRepository.findByProductCodeAllIgnoreCaseAndDeletedFalse(
+                                TEST_PRODUCT_CODE_3))
+                .assertNext(product -> {
+                    assertThat(product).isNotNull();
+                    assertThat(product.getProductCode()).isEqualTo(TEST_PRODUCT_CODE_3);
+                    // Should still be the original product as it was saved first
+                    assertThat(product.getProductName()).isEqualTo("Original Product");
+                    assertThat(product.getPrice()).isEqualByComparingTo(BigDecimal.valueOf(20.0));
+                })
                 .verifyComplete();
     }
 }

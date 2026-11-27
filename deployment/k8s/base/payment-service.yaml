@@ -61,7 +61,7 @@ spec:
         - name: OTEL_SERVICE_NAME
           value: payment-service
         - name: OTEL_RESOURCE_ATTRIBUTES
-          value: service.name=payment-service,service.version=0.0.1-SNAPSHOT
+          value: service.name=payment-service,service.version=0.0.1-SNAPSHOT,service.namespace=retailstore,deployment.environment=kubernetes
         envFrom:
         - configMapRef:
             name: shared-config

@@ -9,15 +9,17 @@ classDiagram
     %% Catalog Service Domain
     class Product {
         +Long id
+        +Long version
         +String productCode
         +String productName
         +String description
-        +double price
+        +BigDecimal price
         +String imageUrl
+        +boolean deleted
         +getId() Long
         +setProductCode(String) Product
         +getProductCode() String
-        +setPrice(double) Product
+        +setPrice(BigDecimal) Product
     }
 
     %% Inventory Service Domain
@@ -84,17 +86,15 @@ classDiagram
         +LocalDateTime lastModifiedDate
     }
 
-    %% Payment Service Domain
-    class Customer {
+    %% Payment Service Domain (jOOQ Generated Record)
+    class CustomersRecord {
         +Long id
         +String name
         +String email
         +String address
         +String phone
-        +double amountAvailable
-        +double amountReserved
-        +setAmountAvailable(double) Customer
-        +setAmountReserved(double) Customer
+        +BigDecimal amountAvailable
+        +BigDecimal amountReserved
     }
 
     %% Relationships
@@ -104,13 +104,13 @@ classDiagram
     Order --> Auditable
     Product --> Inventory
     Product --> OrderItem
-    Customer --> Order
+    CustomersRecord --> Order
 
     %% Service Boundaries
     note for Product "📚 Catalog Service\nPort: 18080\nDatabase: products table"
     note for Inventory "📦 Inventory Service\nPort: 18181\nDatabase: inventory table"
     note for Order "🛍️ Order Service\nPort: 18282\nDatabase: orders, order_items tables"
-    note for Customer "💳 Payment Service\nPort: 18085\nDatabase: customers table"
+    note for CustomersRecord "💳 Payment Service\nPort: 18085\nDatabase: customers table"
 ```
 
 ## 🏢 Service Ownership
@@ -119,13 +119,13 @@ classDiagram
 - **Entities**: `Product`
 - **Database**: `products` table
 - **Responsibility**: Product catalog management
-- **Technology**: Spring Data R2DBC + PostgreSQL
+- **Technology**: Spring Data R2DBC + PostgreSQL + Redis (caching)
 
 ### 📦 Inventory Service (Port: 18181)
 - **Entities**: `Inventory`
 - **Database**: `inventory` table
 - **Responsibility**: Stock level management
-- **Technology**: Spring Data JPA + PostgreSQL
+- **Technology**: Spring Data JPA + jOOQ + PostgreSQL
 
 ### 🛍️ Order Service (Port: 18282)
 - **Entities**: `Order`, `OrderItem`, `OrderStatus`, `Address`, `Auditable`
@@ -134,10 +134,10 @@ classDiagram
 - **Technology**: Spring Data JPA + PostgreSQL
 
 ### 💳 Payment Service (Port: 18085)
-- **Entities**: `Customer`
+- **Entities / Records**: `CustomersRecord` (jOOQ)
 - **Database**: `customers` table
 - **Responsibility**: Customer and payment management
-- **Technology**: Spring Data + PostgreSQL
+- **Technology**: jOOQ + PostgreSQL
 
 ## 🔗 Cross-Service Relationships
 
@@ -146,7 +146,7 @@ classDiagram
 graph LR
     A[Product.productCode] -.->|references| B[Inventory.productCode]
     A -.->|references| C[OrderItem.productCode]
-    D[Customer.id] -.->|references| E[Order.customerId]
+    D[CustomersRecord.id] -.->|references| E[Order.customerId]
     
     style A fill:#e1f5fe
     style B fill:#f3e5f5

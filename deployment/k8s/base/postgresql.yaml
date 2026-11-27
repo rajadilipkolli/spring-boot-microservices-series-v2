@@ -37,7 +37,7 @@ spec:
             secretKeyRef:
               key: POSTGRES_PASSWORD
               name: postgres-credentials
-        image: postgres:18-alpine
+        image: postgres:19-alpine
         name: postgresql
         ports:
         - containerPort: 5432

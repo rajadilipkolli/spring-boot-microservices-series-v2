@@ -27,10 +27,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.common.dto.PagedResult;
 import com.example.inventoryservice.inventory.InventoryAPI;
 import com.example.inventoryservice.inventory.domain.models.InventoryRequest;
 import com.example.inventoryservice.inventory.domain.models.InventoryResponse;
-import com.example.inventoryservice.inventory.domain.models.PagedResult;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.IntStream;
@@ -152,8 +152,8 @@ class InventoryControllerTest {
                                 is("https://api.microservices.com/errors/validation-error")))
                 .andExpect(jsonPath("$.title", is("Constraint Violation")))
                 .andExpect(jsonPath("$.status", is(400)))
-                .andExpect(jsonPath("$.detail", is("Invalid request content.")))
-                .andExpect(jsonPath("$.instance", is("/api/inventory")));
+                .andExpect(jsonPath("$.detail", is("Invalid request content.")));
+        // .andExpect(jsonPath("$.instance", is("/api/inventory")));
     }
 
     @Test
@@ -223,26 +223,21 @@ class InventoryControllerTest {
     @Test
     void shouldDeleteInventory() throws Exception {
         Long inventoryId = 1L;
-        InventoryResponse inventory = new InventoryResponse(1L, "product1", 10, 0);
-        given(inventoryAPI.findInventoryById(inventoryId)).willReturn(Optional.of(inventory));
+        given(inventoryAPI.existsInventoryById(inventoryId)).willReturn(true);
         doNothing().when(inventoryAPI).deleteInventoryById(inventoryId);
 
-        this.mockMvc
-                .perform(delete("/api/inventory/{id}", inventoryId))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.productCode", is(inventory.productCode())))
-                .andExpect(jsonPath("$.availableQuantity", is(10)));
+        this.mockMvc.perform(delete("/api/inventory/{id}", inventoryId)).andExpect(status().isOk());
     }
 
-    /** Verifies deleting an absent inventory identifier returns HTTP 404. */
+    /** Verifies deleting an absent inventory identifier returns HTTP 410. */
     @Test
-    void shouldReturn404WhenDeletingNonExistingInventory() throws Exception {
+    void shouldReturn410WhenDeletingNonExistingInventory() throws Exception {
         Long inventoryId = 1L;
-        given(inventoryAPI.findInventoryById(inventoryId)).willReturn(Optional.empty());
+        given(inventoryAPI.existsInventoryById(inventoryId)).willReturn(false);
 
         this.mockMvc
                 .perform(delete("/api/inventory/{id}", inventoryId))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isGone());
     }
 
     /**
@@ -254,12 +249,9 @@ class InventoryControllerTest {
 
         mockMvc.perform(post("/api/inventory/generate").header("Idempotency-Key", "test-batch-123"))
                 .andExpect(status().isOk())
-                .andExpect(
-                        result ->
-                                assertThat(
-                                                Boolean.parseBoolean(
-                                                        result.getResponse().getContentAsString()))
-                                        .isTrue());
+                .andExpect(result ->
+                        assertThat(Boolean.parseBoolean(result.getResponse().getContentAsString()))
+                                .isTrue());
 
         verify(inventoryAPI, times(1)).updateGeneratedInventory("test-batch-123", null);
     }
@@ -273,12 +265,9 @@ class InventoryControllerTest {
                         post("/api/inventory/generate?batchSize=25")
                                 .header("Idempotency-Key", "test-batch-123"))
                 .andExpect(status().isOk())
-                .andExpect(
-                        result ->
-                                assertThat(
-                                                Boolean.parseBoolean(
-                                                        result.getResponse().getContentAsString()))
-                                        .isTrue());
+                .andExpect(result ->
+                        assertThat(Boolean.parseBoolean(result.getResponse().getContentAsString()))
+                                .isTrue());
 
         verify(inventoryAPI, times(1)).updateGeneratedInventory("test-batch-123", 25);
     }

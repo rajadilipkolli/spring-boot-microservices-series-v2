@@ -16,15 +16,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.common.dto.PagedResult;
 import com.example.paymentservice.common.AbstractIntegrationTest;
 import com.example.paymentservice.jooq.tables.records.CustomersRecord;
 import com.example.paymentservice.model.request.CustomerRequest;
 import com.example.paymentservice.model.response.CustomerResponse;
 import com.example.paymentservice.model.response.OrderResponse;
-import com.example.paymentservice.model.response.PagedResult;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.BeforeEach;
@@ -242,17 +242,16 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .hasContentType(MediaType.APPLICATION_JSON)
                 .bodyJson()
                 .convertTo(CustomerResponse.class)
-                .satisfies(
-                        customerResponse -> {
-                            assertThat(customerResponse.customerId()).isEqualTo(customer.getId());
-                            assertThat(customerResponse.name()).isEqualTo(customer.getName());
-                            assertThat(customerResponse.email()).isEqualTo(customer.getEmail());
-                            assertThat(customerResponse.phone()).isEqualTo(customer.getPhone());
-                            assertThat(customerResponse.addressLine1())
-                                    .isEqualTo(customer.getAddressLine1());
-                            assertThat(customerResponse.amountAvailable())
-                                    .isEqualByComparingTo(customer.getAmountAvailable());
-                        });
+                .satisfies(customerResponse -> {
+                    assertThat(customerResponse.customerId()).isEqualTo(customer.getId());
+                    assertThat(customerResponse.name()).isEqualTo(customer.getName());
+                    assertThat(customerResponse.email()).isEqualTo(customer.getEmail());
+                    assertThat(customerResponse.phone()).isEqualTo(customer.getPhone());
+                    assertThat(customerResponse.addressLine1())
+                            .isEqualTo(customer.getAddressLine1());
+                    assertThat(customerResponse.amountAvailable())
+                            .isEqualByComparingTo(customer.getAmountAvailable());
+                });
     }
 
     /** Verifies that creating an existing customer returns a conflict error. */
@@ -475,6 +474,40 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                         jsonPath(
                                 "$.amountAvailable",
                                 is(customer.getAmountAvailable().doubleValue())));
+
+        // Repeated delete must return 404
+        this.mockMvc
+                .perform(delete("/api/customers/{id}", customer.getId()))
+                .andExpect(status().isNotFound());
+
+        // Get by ID must return 404
+        this.mockMvc
+                .perform(get("/api/customers/{id}", customer.getId()))
+                .andExpect(status().isNotFound());
+
+        // Update must return 404
+        CustomerRequest updateRequest =
+                new CustomerRequest(
+                        "Updated",
+                        customer.getEmail(),
+                        "123-456-7890",
+                        "New Address",
+                        null,
+                        "City",
+                        "State",
+                        "12345",
+                        "Country",
+                        BigDecimal.valueOf(50.0));
+        this.mockMvc
+                .perform(
+                        put("/api/customers/{id}", customer.getId())
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(jsonMapper.writeValueAsString(updateRequest)))
+                .andExpect(status().isNotFound());
+
+        // Retained in database with deleted = true
+        CustomersRecord retained = customerRepository.findById(customer.getId()).orElseThrow();
+        assertThat(retained.getDeleted()).isTrue();
     }
 
     /** Verifies that deleting an unknown customer returns HTTP 404 with problem details. */
@@ -518,7 +551,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                         "COMPLETED",
                         "PAYMENT",
                         address,
-                        LocalDateTime.now(),
+                        Instant.parse("2026-10-10T12:00:00Z"),
                         BigDecimal.valueOf(20.0),
                         List.of(item));
 
@@ -535,6 +568,7 @@ class CustomerControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.data[0].orderId", is("1")))
                 .andExpect(jsonPath("$.data[0].customerId").value(customerId.toString()))
                 .andExpect(jsonPath("$.data[0].status", is("COMPLETED")))
+                .andExpect(jsonPath("$.data[0].createdDate", is("2026-10-10T12:00:00Z")))
                 .andExpect(jsonPath("$.data[0].items[0].itemId", is("100")))
                 .andExpect(jsonPath("$.data[0].items[0].productPrice", is(10)))
                 .andExpect(jsonPath("$.data[0].items[0].price", is(20.0)))

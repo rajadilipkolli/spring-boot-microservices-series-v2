@@ -10,9 +10,9 @@ This skill describes how to deploy and validate the complete microservices stack
 ## Standards
 - **Cluster**: Use Kind with `deployment/k8s/kind-config.yaml` and its port mappings for ports 80 and 443.
 - **Images**: Use the `dockertmt/mmv2-<service>:0.0.1-SNAPSHOT` image convention and load images into Kind before applying manifests.
-- **Ingress**: Install the pinned ingress-nginx manifest used by `.github/workflows/k8s-e2e.yml`.
+- **Gateway API**: Install Envoy Gateway and Kubernetes Gateway API CRDs as configured in `.github/workflows/k8s-e2e.yml`.
 - **Overlay**: Use `deployment/k8s/overlays/ci/` for deterministic local and CI validation.
-- **Validation**: Run rollout, pod-readiness, ingress, E2E, webapp, and Keycloak checks with explicit timeouts.
+- **Validation**: Run rollout, pod-readiness, gateway, E2E, webapp, and Keycloak checks with explicit timeouts.
 
 ## Steps
 
@@ -35,9 +35,17 @@ Create a fresh cluster using `deployment/k8s/kind-config.yaml`. Keep the Kind ve
 
 Pull every configured service image and load it with `kind load docker-image --name kind`. A failed pull or load must stop the workflow. Ensure the CI overlay uses `imagePullPolicy: IfNotPresent` so Kubernetes uses the loaded image.
 
-### 4. Install Ingress
+### 4. Install Gateway API and Controller
 
-Apply the pinned ingress-nginx Kind manifest and wait for the controller pod to become ready before applying application manifests. Use an explicit timeout and allow failure to propagate.
+Envoy Gateway and Kubernetes Gateway API CRDs are installed automatically by `deployment/k8s/deploy.sh` before applying overlay manifests. The deployment script server-side applies the release manifest and waits for Gateway API CRDs to report `Established` and the controller deployment to report `Available`:
+
+```bash
+kubectl apply --server-side -f https://github.com/envoyproxy/gateway/releases/download/v1.3.0/install.yaml
+kubectl wait --for=condition=Established crd/gatewayclasses.gateway.networking.k8s.io crd/gateways.gateway.networking.k8s.io crd/httproutes.gateway.networking.k8s.io --timeout=120s
+kubectl wait --namespace envoy-gateway-system --for=condition=Available deployment/envoy-gateway --timeout=120s
+```
+
+Use an explicit timeout and allow failure to propagate.
 
 ### 5. Apply the Overlay
 
@@ -69,13 +77,13 @@ path and does not include this Job.
 
 ### 7. Run End-to-End Validation
 
-Map `retailstore.local`, `api.retailstore.local`, `keycloak.local`, and `jobrunr.local` to the ingress address. Run:
+Map `retailstore.local`, `api.retailstore.local`, `keycloak.local`, and `jobrunr.local` to the gateway address (127.0.0.1 on Kind). Run:
 
 ```bash
 ./mvnw test -pl e2e-tests -DskipE2E=false -Dbase.url=http://api.retailstore.local -Dkeycloak.url=http://keycloak.local
 ```
 
-Then verify webapp access and a seeded Keycloak Direct Access Grant token request. The E2E flow indirectly validates config-server, Eureka, gateway routing, and the distributed catalog/inventory/order/payment path.
+Then verify webapp access and a seeded Keycloak Direct Access Grant token request. The E2E flow validates Envoy Gateway routing, Spring Cloud Gateway, Eureka discovery, and the distributed catalog/inventory/order/payment path.
 
 ### 8. Capture Failure Diagnostics
 

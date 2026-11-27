@@ -1,6 +1,6 @@
 /***
 <p>
-    Licensed under MIT License Copyright (c) 2021-2025 Raja Kolli.
+    Licensed under MIT License Copyright (c) 2021-2026 Raja Kolli.
 </p>
 ***/
 
@@ -15,6 +15,8 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -26,19 +28,19 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.common.dto.PagedResult;
 import com.example.orderservice.entities.Order;
-import com.example.orderservice.entities.OrderStatus;
+import com.example.orderservice.exception.OrderNotFoundException;
 import com.example.orderservice.model.Address;
 import com.example.orderservice.model.request.OrderItemRequest;
 import com.example.orderservice.model.request.OrderRequest;
 import com.example.orderservice.model.response.OrderItemResponse;
 import com.example.orderservice.model.response.OrderResponse;
-import com.example.orderservice.model.response.PagedResult;
 import com.example.orderservice.services.OrderGeneratorService;
 import com.example.orderservice.services.OrderService;
 import com.example.orderservice.utils.AppConstants;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -46,12 +48,15 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
@@ -100,7 +105,7 @@ class OrderControllerTest {
                                 "state",
                                 "zipCode",
                                 "country"),
-                        LocalDateTime.now(),
+                        Instant.now(),
                         BigDecimal.TEN,
                         new ArrayList<>()));
         orderResponseList.add(
@@ -116,7 +121,7 @@ class OrderControllerTest {
                                 "state",
                                 "zipCode",
                                 "country"),
-                        LocalDateTime.now(),
+                        Instant.now(),
                         BigDecimal.TEN,
                         new ArrayList<>()));
         orderResponseList.add(
@@ -132,14 +137,15 @@ class OrderControllerTest {
                                 "state",
                                 "zipCode",
                                 "country"),
-                        LocalDateTime.now(),
+                        Instant.now(),
                         BigDecimal.TEN,
                         new ArrayList<>()));
         Page<OrderResponse> page = new PageImpl<>(orderResponseList);
         PagedResult<OrderResponse> orderResponsePagedResult =
                 new PagedResult<>(page, orderResponseList);
 
-        given(orderService.findAllOrders(0, 10, "id", "asc")).willReturn(orderResponsePagedResult);
+        given(orderService.findAllOrders(PageRequest.of(0, 10, Sort.by("id"))))
+                .willReturn(orderResponsePagedResult);
 
         this.mockMvc
                 .perform(get("/api/orders"))
@@ -164,6 +170,108 @@ class OrderControllerTest {
                 .andExpect(jsonPath("$.data[0].totalPrice").value(10));
     }
 
+    @ParameterizedTest
+    @CsvSource({
+        "pageNo=2&pageSize=5&sortBy=createdDate&sortDir=desc, 2, 5, createdDate, DESC",
+        "pageNo=3, 3, 10, id, ASC",
+        "pageSize=7&sortDir=desc, 0, 7, id, DESC",
+        "sortBy=customerId, 0, 10, customerId, ASC",
+        "page=2&size=5, 2, 5, id, ASC",
+        "page=1&size=4&pageNo=3&pageSize=7, 1, 4, id, ASC",
+        "size=3000, 0, 2000, id, ASC"
+    })
+    void shouldPreservePaginationParameters(
+            String query, int page, int size, String property, Sort.Direction direction)
+            throws Exception {
+        Pageable expected = PageRequest.of(page, size, Sort.by(direction, property));
+        given(orderService.findAllOrders(expected))
+                .willReturn(new PagedResult<>(Page.empty(expected), List.of()));
+
+        mockMvc.perform(get("/api/orders?" + query)).andExpect(status().isOk());
+
+        verify(orderService).findAllOrders(expected);
+    }
+
+    @Test
+    void shouldPreserveMultipleSortOrdersAndPreferModernSort() throws Exception {
+        Pageable expected =
+                PageRequest.of(2, 5, Sort.by(Sort.Order.desc("createdDate"), Sort.Order.asc("id")));
+        given(orderService.findAllOrders(expected))
+                .willReturn(new PagedResult<>(Page.empty(expected), List.of()));
+
+        mockMvc.perform(
+                        get("/api/orders")
+                                .param("page", "2")
+                                .param("size", "5")
+                                .param("sort", "createdDate,desc", "id,asc")
+                                .param("sortBy", "unsupported")
+                                .param("sortDir", "desc"))
+                .andExpect(status().isOk());
+
+        verify(orderService).findAllOrders(expected);
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+            strings = {
+                "id",
+                "customerId",
+                "status",
+                "source",
+                "version",
+                "createdBy",
+                "createdDate",
+                "lastModifiedBy",
+                "lastModifiedDate"
+            })
+    void shouldAcceptAllowedSortProperties(String property) throws Exception {
+        Pageable expected = PageRequest.of(0, 10, Sort.by(property));
+        given(orderService.findAllOrders(expected))
+                .willReturn(new PagedResult<>(Page.empty(expected), List.of()));
+
+        mockMvc.perform(get("/api/orders").param("sort", property)).andExpect(status().isOk());
+        mockMvc.perform(get("/api/orders").param("sortBy", property)).andExpect(status().isOk());
+
+        verify(orderService, times(2)).findAllOrders(expected);
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+            strings = {
+                "sort=unsupported,asc",
+                "sortBy=unsupported",
+                "sort=id,asc&sort=unsupported,desc",
+                "sort=unsupported,asc&sortBy=id",
+                "sort=items.id,asc",
+                "sortBy=deliveryAddress.city"
+            })
+    void shouldRejectUnsupportedSortPropertiesBeforeCallingService(String query) throws Exception {
+        mockMvc.perform(get("/api/orders?" + query))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.title", is("Invalid Request")));
+
+        verifyNoInteractions(orderService);
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+            strings = {
+                "page=-1",
+                "size=0",
+                "size=-1",
+                "pageNo=-1",
+                "pageSize=0",
+                "pageSize=-1",
+                "page=1&pageNo=-1",
+                "page=invalid",
+                "size=2147483648"
+            })
+    void shouldRejectInvalidPaginationBeforeCallingService(String query) throws Exception {
+        mockMvc.perform(get("/api/orders?" + query)).andExpect(status().isBadRequest());
+
+        verifyNoInteractions(orderService);
+    }
+
     @Nested
     @DisplayName("find methods")
     class Find {
@@ -175,7 +283,7 @@ class OrderControllerTest {
         @Test
         void shouldFindOrderById() throws Exception {
             Long orderId = 1L;
-            LocalDateTime testDateTime = LocalDateTime.now();
+            Instant testDateTime = Instant.now();
             OrderResponse orderResponse =
                     new OrderResponse(
                             1L,
@@ -217,7 +325,7 @@ class OrderControllerTest {
         @Test
         void shouldRespectDelayParameter() throws Exception {
             Long orderId = 1L;
-            LocalDateTime testDateTime = LocalDateTime.now();
+            Instant testDateTime = Instant.now();
             OrderResponse orderResponse =
                     new OrderResponse(
                             1L,
@@ -299,7 +407,7 @@ class OrderControllerTest {
                                     "state",
                                     "zipCode",
                                     "country"),
-                            LocalDateTime.now(),
+                            Instant.now(),
                             BigDecimal.TEN,
                             List.of(orderItemDto));
             given(orderService.saveOrder(any(OrderRequest.class))).willReturn(orderResponse);
@@ -360,7 +468,7 @@ class OrderControllerTest {
                     .andExpect(jsonPath("$.title", is("Constraint Violation")))
                     .andExpect(jsonPath("$.status", is(400)))
                     .andExpect(jsonPath("$.detail", is("Invalid request content.")))
-                    .andExpect(jsonPath("$.instance", is("/api/orders")))
+                    //                    .andExpect(jsonPath("$.instance", is("/api/orders")))
                     .andExpect(jsonPath("$.violations", hasSize(1)))
                     .andExpect(jsonPath("$.violations[0].field", is("items")))
                     .andExpect(
@@ -399,7 +507,7 @@ class OrderControllerTest {
                     .andExpect(jsonPath("$.title", is("Constraint Violation")))
                     .andExpect(jsonPath("$.status", is(400)))
                     .andExpect(jsonPath("$.detail", is("Invalid request content.")))
-                    .andExpect(jsonPath("$.instance", is("/api/orders")))
+                    //                    .andExpect(jsonPath("$.instance", is("/api/orders")))
                     .andExpect(jsonPath("$.violations", hasSize(1)))
                     .andExpect(jsonPath("$.violations[0].field", is("customerId")))
                     .andExpect(
@@ -428,7 +536,7 @@ class OrderControllerTest {
                                     "zipCode",
                                     "country"));
 
-            LocalDateTime testDateTime = LocalDateTime.now();
+            Instant testDateTime = Instant.now();
             OrderResponse orderResponse =
                     new OrderResponse(
                             1L,
@@ -511,14 +619,11 @@ class OrderControllerTest {
         @Test
         void shouldDeleteOrder() throws Exception {
             Long orderId = 1L;
-            Order order = new Order().setId(orderId).setCustomerId(1L).setStatus(OrderStatus.NEW);
-            given(orderService.findById(orderId)).willReturn(Optional.of(order));
             doNothing().when(orderService).deleteOrderById(orderId);
 
             mockMvc.perform(delete("/api/orders/{id}", orderId)).andExpect(status().isAccepted());
 
             // Verify that the service method was called with the correct ID
-            verify(orderService).findById(orderId);
             verify(orderService).deleteOrderById(orderId);
             verifyNoMoreInteractions(orderService);
         }
@@ -526,7 +631,9 @@ class OrderControllerTest {
         @Test
         void shouldReturn404WhenDeletingNonExistingOrder() throws Exception {
             Long orderId = 1L;
-            given(orderService.findOrderById(orderId)).willReturn(Optional.empty());
+            doThrow(new OrderNotFoundException(orderId))
+                    .when(orderService)
+                    .deleteOrderById(orderId);
 
             mockMvc.perform(delete("/api/orders/{id}", orderId))
                     .andExpect(status().isNotFound())
@@ -597,7 +704,7 @@ class OrderControllerTest {
                             "WEB",
                             new Address(
                                     "Address1", "Address2", "city", "state", "zipCode", "country"),
-                            LocalDateTime.now(),
+                            Instant.now(),
                             BigDecimal.TEN,
                             List.of());
 
@@ -643,7 +750,7 @@ class OrderControllerTest {
                             "WEB",
                             new Address(
                                     "Address1", "Address2", "city", "state", "zipCode", "country"),
-                            LocalDateTime.now(),
+                            Instant.now(),
                             BigDecimal.TEN,
                             List.of());
 

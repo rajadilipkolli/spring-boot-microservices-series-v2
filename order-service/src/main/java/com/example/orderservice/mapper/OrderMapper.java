@@ -6,9 +6,9 @@
 
 package com.example.orderservice.mapper;
 
+import com.example.common.dto.OrderDto;
 import com.example.orderservice.entities.Order;
 import com.example.orderservice.entities.OrderItem;
-import com.example.orderservice.model.dtos.OrderDto;
 import com.example.orderservice.model.request.OrderItemRequest;
 import com.example.orderservice.model.request.OrderRequest;
 import com.example.orderservice.model.response.OrderItemResponse;
@@ -44,11 +44,16 @@ public interface OrderMapper {
     @Mapping(target = "productId", source = "productCode")
     OrderDto.OrderItemDto orderItemToOrderItemDto(OrderItem orderItem);
 
+    /**
+     * Creates an active order from request details, attaching the requested items. Leaves its ID,
+     * version, status, source, and audit fields at their entity defaults.
+     */
     @Mapping(target = "version", ignore = true)
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "status", ignore = true)
     @Mapping(target = "source", ignore = true)
     @Mapping(target = "items", ignore = true)
+    @Mapping(target = "deleted", ignore = true)
     @Mapping(target = "createdBy", ignore = true)
     @Mapping(target = "createdDate", ignore = true)
     @Mapping(target = "lastModifiedBy", ignore = true)
@@ -64,9 +69,8 @@ public interface OrderMapper {
             OrderRequest orderRequest, @MappingTarget Order order) {
         orderRequest
                 .items()
-                .forEach(
-                        orderItemRequest ->
-                                order.addOrderItem(orderItemRequestToOrderItem(orderItemRequest)));
+                .forEach(orderItemRequest ->
+                        order.addOrderItem(orderItemRequestToOrderItem(orderItemRequest)));
     }
 
     @InheritConfiguration

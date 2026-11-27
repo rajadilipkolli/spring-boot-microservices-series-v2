@@ -24,7 +24,7 @@
                     <tr>
                         <td><a x-bind:href="'/orders/'+order.orderId" x-text="order.orderId">OrderNumber</a></td>
                         <td x-text="order.status">status</td>
-                        <td x-text="order.createdDate">createdDate</td>
+                        <td x-text="formatDateTime(order.createdDate)" x-bind:title="order.createdDate">createdDate</td>
                     </tr>
                 </template>
                 </tbody>

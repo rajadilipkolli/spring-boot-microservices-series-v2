@@ -9,8 +9,9 @@ package com.example.inventoryservice.inventory.web.service;
 import static com.example.inventoryservice.inventory.jooq.tables.Inventory.INVENTORY;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.example.inventoryservice.inventory.config.JooqConfig;
+import com.example.inventoryservice.inventory.jooq.tables.records.InventoryRecord;
 import com.example.inventoryservice.inventory.shared.SQLContainersConfig;
+import io.hypersistence.tsid.TSID;
 import java.util.List;
 import org.jooq.DSLContext;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,7 +22,7 @@ import org.springframework.boot.jooq.test.autoconfigure.JooqTest;
 import org.springframework.context.annotation.Import;
 
 @JooqTest(properties = {"spring.cloud.config.enabled=false"})
-@Import({SQLContainersConfig.class, JooqConfig.class})
+@Import({SQLContainersConfig.class})
 @AutoConfigureTestDatabase
 class JOOQInventoryRepositoryTest {
 
@@ -34,47 +35,36 @@ class JOOQInventoryRepositoryTest {
 
     @Test
     void findByProductCodeInAndQuantityAvailable() {
-        List<Inventory> inventoryList =
+        List<InventoryRecord> inventoryList =
                 List.of(
-                        new Inventory()
-                                .setId(io.hypersistence.tsid.TSID.fast().toLong())
+                        new InventoryRecord()
+                                .setId(TSID.fast().toLong())
                                 .setProductCode("product1")
-                                .setAvailableQuantity(10)
+                                .setQuantity(10)
                                 .setReservedItems(0),
-                        new Inventory()
-                                .setId(io.hypersistence.tsid.TSID.fast().toLong())
+                        new InventoryRecord()
+                                .setId(TSID.fast().toLong())
                                 .setProductCode("product2")
-                                .setAvailableQuantity(0)
+                                .setQuantity(0)
                                 .setReservedItems(0));
         inventoryList.forEach(inventory -> dslContext.newRecord(INVENTORY, inventory).insert());
 
-        List<Inventory> findAvailableInventory =
+        List<InventoryRecord> findAvailableInventory =
                 dslContext
-                        .select()
-                        .from(INVENTORY)
+                        .selectFrom(INVENTORY)
                         .where(
                                 INVENTORY
                                         .PRODUCT_CODE
                                         .in(List.of("product1", "product2"))
                                         .and(INVENTORY.QUANTITY.gt(0)))
-                        .fetchInto(Inventory.class);
+                        .fetch();
 
         assertThat(findAvailableInventory).isNotEmpty().hasSize(1);
 
-        boolean exists =
-                dslContext.fetchExists(
-                        dslContext
-                                .selectOne()
-                                .from(INVENTORY)
-                                .where(INVENTORY.PRODUCT_CODE.eq("product2")));
+        boolean exists = dslContext.fetchExists(INVENTORY, INVENTORY.PRODUCT_CODE.eq("product2"));
         assertThat(exists).isTrue();
 
-        exists =
-                dslContext.fetchExists(
-                        dslContext
-                                .selectOne()
-                                .from(INVENTORY)
-                                .where(INVENTORY.PRODUCT_CODE.eq("product200")));
+        exists = dslContext.fetchExists(INVENTORY, INVENTORY.PRODUCT_CODE.eq("product200"));
         assertThat(exists).isFalse();
     }
 }

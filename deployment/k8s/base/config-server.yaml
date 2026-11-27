@@ -53,7 +53,7 @@ spec:
         - name: OTEL_SERVICE_NAME
           value: config-server
         - name: OTEL_RESOURCE_ATTRIBUTES
-          value: service.name=config-server,service.version=0.0.1-SNAPSHOT
+          value: service.name=config-server,service.version=0.0.1-SNAPSHOT,service.namespace=retailstore,deployment.environment=kubernetes
         image: dockertmt/mmv2-config-server:0.0.1-SNAPSHOT
         livenessProbe:
           httpGet:

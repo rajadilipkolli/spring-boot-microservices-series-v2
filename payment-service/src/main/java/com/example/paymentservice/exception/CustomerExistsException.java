@@ -10,4 +10,14 @@ public class CustomerExistsException extends RuntimeException {
     public CustomerExistsException(String message) {
         super(message);
     }
+
+    /**
+     * Creates a duplicate-customer error with the supplied description and cause.
+     *
+     * @param message the description of the customer conflict
+     * @param cause the underlying cause
+     */
+    public CustomerExistsException(String message, Throwable cause) {
+        super(message, cause);
+    }
 }

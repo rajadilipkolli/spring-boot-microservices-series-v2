@@ -5,15 +5,15 @@
 ### What is Commit Interval?
 **Commit Interval** is the frequency at which Kafka Streams flushes dirty cache entries to persistent storage and commits consumer offsets.
 
-```java
-// From application.yml
+```yaml
+# From application.yml / KafkaStreamsConfig.java
 spring:
   kafka:
     streams:
       properties:
         commit:
           interval:
-            ms: 1000  # Commit every 1 second
+            ms: 1000  # Commit interval (1000ms configured in KafkaStreamsConfig.java)
 ```
 
 ### What Commit Interval Does:
@@ -478,7 +478,7 @@ sequenceDiagram
     
     Kafka->>Pod1: Payment event from payment-orders-0
     Kafka->>Pod1: Stock event from stock-orders-0
-    Pod1->>Pod1: Join events in 10s window
+    Pod1->>Pod1: Join events in 30s window + 30s grace
     Pod1->>Pod1: Business logic: ACCEPT + ACCEPT = CONFIRMED
     Pod1->>Pod1: Cache P0: put(1001, confirmedOrder) [DIRTY]
     Pod1->>Kafka: Publish final result to orders-0

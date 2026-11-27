@@ -1,11 +1,14 @@
+/***
+ * <p>
+ * Licensed under MIT License Copyright (c) 2026 Raja Kolli.
+ * </p>
+ ***/
 package com.example.retailstore.webapp.web.controller;
 
 import com.example.retailstore.webapp.model.CartState;
+import com.example.retailstore.webapp.services.CartService;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
-import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -22,43 +25,35 @@ import org.springframework.web.bind.annotation.RestController;
 @Validated
 public class CartController {
 
-    private static final String CART_SESSION_KEY = "CART_SESSION_STATE";
+    private final CartService cartService;
+
+    public CartController(CartService cartService) {
+        this.cartService = cartService;
+    }
 
     /**
-     * Returns the session cart, storing an empty cart with a zero total and a new revision when absent.
+     * Returns the session cart, storing an empty cart with a zero total and a new revision when
+     * absent.
      */
     @GetMapping
     public CartState getCart(HttpSession session) {
-        CartState cart = (CartState) session.getAttribute(CART_SESSION_KEY);
-        if (cart == null) {
-            cart = new CartState(
-                    new ArrayList<>(), BigDecimal.ZERO, UUID.randomUUID().toString());
-            session.setAttribute(CART_SESSION_KEY, cart);
-        }
-        return cart;
+        return cartService.getCart(session);
     }
 
     @PostMapping
     public ResponseEntity<?> updateCart(@RequestBody @Valid CartState cart, HttpSession session) {
-        CartState existingCart = (CartState) session.getAttribute(CART_SESSION_KEY);
-        if (existingCart != null
-                && cart.revision() != null
-                && !existingCart.revision().equals(cart.revision())) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body("Stale cart data");
-        }
-        CartState updatedCart = new CartState(
-                cart.items(), cart.totalAmount(), UUID.randomUUID().toString());
-        session.setAttribute(CART_SESSION_KEY, updatedCart);
-        return ResponseEntity.ok(updatedCart);
+        return cartService
+                .updateCart(cart, session)
+                .<ResponseEntity<?>>map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.CONFLICT).body("Stale cart data"));
     }
 
     @DeleteMapping
     public ResponseEntity<?> deleteCart(@RequestParam(required = false) String revision, HttpSession session) {
-        CartState existingCart = (CartState) session.getAttribute(CART_SESSION_KEY);
-        if (existingCart != null && revision != null && !existingCart.revision().equals(revision)) {
+        boolean deleted = cartService.deleteCart(revision, session);
+        if (!deleted) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body("Stale cart data");
         }
-        session.removeAttribute(CART_SESSION_KEY);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.noContent().build();
     }
 }

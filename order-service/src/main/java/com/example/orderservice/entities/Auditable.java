@@ -8,7 +8,7 @@ package com.example.orderservice.entities;
 
 import jakarta.persistence.EntityListeners;
 import jakarta.persistence.MappedSuperclass;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedBy;
@@ -21,11 +21,11 @@ public abstract class Auditable<T> {
 
     @CreatedBy protected T createdBy;
 
-    @CreatedDate protected LocalDateTime createdDate;
+    @CreatedDate protected Instant createdDate;
 
     @LastModifiedBy protected T lastModifiedBy;
 
-    @LastModifiedDate protected LocalDateTime lastModifiedDate;
+    @LastModifiedDate protected Instant lastModifiedDate;
 
     public T getCreatedBy() {
         return createdBy;
@@ -35,11 +35,11 @@ public abstract class Auditable<T> {
         this.createdBy = createdBy;
     }
 
-    public LocalDateTime getCreatedDate() {
+    public Instant getCreatedDate() {
         return createdDate;
     }
 
-    public void setCreatedDate(LocalDateTime createdDate) {
+    public void setCreatedDate(Instant createdDate) {
         this.createdDate = createdDate;
     }
 
@@ -51,11 +51,11 @@ public abstract class Auditable<T> {
         this.lastModifiedBy = lastModifiedBy;
     }
 
-    public LocalDateTime getLastModifiedDate() {
+    public Instant getLastModifiedDate() {
         return lastModifiedDate;
     }
 
-    public void setLastModifiedDate(LocalDateTime lastModifiedDate) {
+    public void setLastModifiedDate(Instant lastModifiedDate) {
         this.lastModifiedDate = lastModifiedDate;
     }
 }

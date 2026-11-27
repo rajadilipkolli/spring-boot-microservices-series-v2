@@ -1,0 +1,25 @@
+# https://docs.liquibase.com/concepts/changelogs/yaml-format.html
+databaseChangeLog:
+  - changeSet:
+      author: rajakolli
+      id: 05-add-product-deleted-column
+      preConditions:
+        - onFail: MARK_RAN
+          not:
+            - columnExists:
+                tableName: products
+                columnName: deleted
+      changes:
+        - addColumn:
+            tableName: products
+            columns:
+              - column:
+                  name: deleted
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+      rollback:
+        - dropColumn:
+            tableName: products
+            columnName: deleted

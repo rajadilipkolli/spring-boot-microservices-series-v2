@@ -33,7 +33,7 @@ Without Kubernetes you would have to manually restart crashed apps, manually mov
 | **Deployment**         | HR policy for a team             | Declares how many copies of an app should run and keeps them healthy                     |
 | **StatefulSet**        | A department with assigned desks | Like a Deployment, but for apps that need a stable identity (e.g. Kafka, databases)      |
 | **Service**            | The internal phone directory     | Gives each app a stable address so other apps can find it                                |
-| **Ingress**            | The front-door receptionist      | Routes outside traffic (web browser requests) to the right internal app                  |
+| **Gateway API**        | The front-door receptionist      | Routes outside traffic (web browser requests) to the right internal app via Gateway & HTTPRoute |
 | **Namespace**          | A separate wing of the building  | Logical boundary to group related resources — all retailstore apps live in `retailstore` |
 | **ConfigMap / Secret** | Employee handbook / safe         | ConfigMap stores non-sensitive configuration values; Secret stores sensitive values such as passwords and API keys |
 
@@ -41,36 +41,37 @@ Without Kubernetes you would have to manually restart crashed apps, manually mov
 
 ### 🏗️ How the Retail Store Fits Together
 
-Here is how a customer's web request travels through the system:
+Here is how client traffic travels through the system:
 
 ```
-Browser / curl
+Client (Browser / curl / test runner)
      │
      ▼
-┌─────────────────────────────────────┐
-│           NGINX Ingress             │  ← Front door: routes api.retailstore.local
-│         (api.retailstore.local)     │    to the right service
-└──────────────┬──────────────────────┘
-               │
-               ▼
-┌──────────────────────────┐
-│       API Gateway        │  ← Reception desk: decides which service
-│       (port 8765)        │    should handle the request
-└──┬──────┬──────┬─────────┘
-   │      │      │
-   ▼      ▼      ▼
-Catalog  Inventory  Order  ← The actual worker services
-Service  Service    Service
-   │                  │
-   │     ┌────────────┘
-   ▼     ▼
- Kafka (message bus)  ← Like an internal memo system between services
-   │
-   ▼
-Payment Service       ← Reacts to order events asynchronously
+┌─────────────────────────────────────────────────────────────┐
+│             Envoy Gateway (NodePort :80 / :443)             │
+│                    retailstore-gateway                      │
+└──────┬──────────────────┬───────────────────┬───────────────┘
+       │                  │                   │               │
+       │ host:            │ host:             │ host:         │ host:
+       │ retailstore.     │ keycloak.         │ jobrunr.      │ api.retailstore.
+       │ local            │ local             │ local         │ local
+       ▼                  ▼                   ▼               ▼
+┌──────────────┐   ┌──────────────┐   ┌──────────────┐   ┌──────────────────────────┐
+│ retail-store-│   │   Keycloak   │   │ order-service│   │       API Gateway        │
+│ webapp       │   │   (:8080)    │   │ (:28282      │   │       (:8765)            │
+│ (:8080)      │   │              │   │  dashboard)  │   │  Spring Cloud Gateway    │
+└──────────────┘   └──────────────┘   └──────────────┘   └──┬──────┬──────┬──────┬──┘
+                                                            │      │      │      │
+                                    /catalog-service ───────┘      │      │      └── /
+                                    /inventory-service ────────────┘      │        (actuator,
+                                    /order-service ───────────────────────┘         docs, etc.)
+                                    /payment-service
+                                           │
+                                           ▼
+                                 Business Microservices
 ```
 
-Each box above is one or more **Pods** managed by a **Deployment** (or **StatefulSet** for Kafka and PostgreSQL). A **Service** resource gives each box a stable internal address.
+Each box above is one or more **Pods** managed by a **Deployment** (or **StatefulSet** for Kafka and PostgreSQL). A **Service** resource gives each box a stable internal address. The diagram shows the local HTTP listener (port 80 / NodePort 30080). In production, port 80 redirects to HTTPS and Envoy Gateway terminates TLS on port 443 (NodePort 30443). Spring Cloud Gateway handles internal application routing, circuit breaking, and rate limiting behind Envoy Gateway.
 
 ---
 
@@ -88,10 +89,10 @@ This means the retail store can survive individual failures without manual inter
 
 ### 📦 Namespaces Used in This Project
 
-| Namespace       | Purpose                                                                                                          |
-|-----------------|------------------------------------------------------------------------------------------------------------------|
-| `retailstore`   | All application services (catalog, order, payment, etc.) and infrastructure (Kafka, PostgreSQL, Redis, Keycloak) |
-| `ingress-nginx` | The NGINX Ingress Controller that handles external HTTP traffic                                                  |
+| Namespace              | Purpose                                                                                                          |
+|------------------------|------------------------------------------------------------------------------------------------------------------|
+| `retailstore`          | All application services (catalog, order, payment, etc.) and infrastructure (Kafka, PostgreSQL, Redis, Keycloak) |
+| `envoy-gateway-system` | The Envoy Gateway controller and proxy infrastructure that handles external HTTP traffic                         |
 
 ---
 
@@ -119,9 +120,9 @@ deployment/k8s/
 - **Kind**: Used to create the local cluster.
 - **kubectl** and **Kustomize**: Recent kubectl versions include Kustomize.
 - **curl**, **jq**, and **sudo**: Required by the E2E validation and local host mapping.
-- **NGINX Ingress Controller**: Required for the host-based application routes.
+- **Envoy Gateway**: Required for host-based application routes (see [Install Envoy Gateway and Gateway API CRDs](#install-envoy-gateway-and-gateway-api-crds)).
 
-## Cluster Setup and Ingress
+## Cluster Setup and Gateway API
 
 ### Local Hostnames
 
@@ -142,22 +143,46 @@ kind create cluster --name kind \
   --config deployment/k8s/kind-config.yaml --wait 120s
 ```
 
-### Install NGINX Ingress
+### Install Envoy Gateway and Gateway API CRDs
+
+Envoy Gateway is installed automatically by `deployment/k8s/deploy.sh` using `ENVOY_GATEWAY_VERSION` (default `v1.7.5`). Use a controller version that reports the observed generation on accepted policies. Envoy Gateway v1.3 does not report it.
+
+To install or upgrade manually:
 
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.12.1/deploy/static/provider/kind/deploy.yaml
-kubectl wait --namespace ingress-nginx --for=condition=ready pod \
-  --selector=app.kubernetes.io/component=controller --timeout=120s
+kubectl apply --server-side -f https://github.com/envoyproxy/gateway/releases/download/v1.7.5/install.yaml
+kubectl wait --for=condition=Established crd/gatewayclasses.gateway.networking.k8s.io crd/gateways.gateway.networking.k8s.io crd/httproutes.gateway.networking.k8s.io crd/backendtrafficpolicies.gateway.envoyproxy.io crd/securitypolicies.gateway.envoyproxy.io --timeout=120s
+kubectl wait --namespace envoy-gateway-system --for=condition=Available deployment/envoy-gateway --timeout=120s
 ```
+
+### Gateway API Reconciliation and Status Verification
+
+From the repository root, run the same read-only check used by `deploy.sh`. Pass the deployed overlay:
+
+```bash
+./deployment/k8s/verify-gateway.sh dev
+```
+
+The script fails if a required resource cannot be read or its conditions do not become current and `True` within 60 seconds. It checks `Accepted` on GatewayClass `eg` and both `Accepted` and `Programmed` on Gateway `retailstore-gateway`. Each of the four application HTTPRoutes must report both `Accepted=True` and `ResolvedRefs=True` for that Gateway in the same parent status. The check also requires `Accepted=True` on BackendTrafficPolicy `base-traffic-policy` and SecurityPolicy `jobrunr-security-policy` for that Gateway. For `prod`, it verifies the HTTPS listener and the HTTP redirect route as well.
+
+
+### Health Check and Traffic Policy Model
+
+Envoy Gateway implements traffic and resilience policies via Gateway API extension policies:
+- **`BackendTrafficPolicy` (`base-traffic-policy`)**: Configures a 10s TCP connect timeout and passive health checking (outlier detection) with 5 consecutive 5xx errors, 3 consecutive gateway errors, 10s interval, 30s base ejection time, and 50% max ejection percent. Kubernetes EndpointSlices reflect standard pod readiness, and passive health checking adds automatic outlier ejection for degraded backend pods.
+- **`SecurityPolicy` (`jobrunr-security-policy`)**: Enforces HTTP Basic Authentication directly at the Envoy Gateway perimeter for `jobrunr.local`.
+- **Overlay Patches**: Overlays such as `staging` and `prod` patch the base traffic policy to customize HTTP timeouts (120s) and local rate limits (20 req/s per client IP) while inheriting passive health checks and connect timeouts from `base`.
 
 ## Deployment Instructions
 
 The deployment manifests are packaged using Kustomize under `deployment/k8s/`:
 
-- `base`: Shared resources, stateful components, and service configurations.
+- `base`: Shared resources, stateful components, Gateway API routes, and base traffic policies.
 - `dev`: Local development overlay.
 - `ci`: Deterministic test overlay with `IfNotPresent` image policy.
-- `prod`: Production stub with multiple replicas and TLS.
+- `hardening-base`: Pod Security Standards (restricted) and baseline security constraints.
+- `staging`: Staging overlay with replica tuning and traffic policy rate limiting.
+- `prod`: Production overlay with high-availability operators (CloudNativePG & Strimzi Kafka) and rate limiting.
 - `observability`: OTEL LGTM stack and tracing configuration.
 - `autoscaling`: HorizontalPodAutoscalers for business services.
 
@@ -195,20 +220,80 @@ kubectl apply -k deployment/k8s/overlays/ci/
 
 For the `prod` overlay, the data tier leverages Kubernetes Operators for High Availability (CloudNativePG for PostgreSQL and Strimzi for Kafka). Operators must be installed explicitly so their CustomResourceDefinitions (CRDs) are registered before Kustomize attempts to create the custom cluster resources.
 
+Before running the production deployment, provision a `kubernetes.io/tls` Secret named `retailstore-tls` in the `retailstore` namespace. Its certificate must be trusted by clients and the webapp and cover `retailstore.local`, `api.retailstore.local`, `keycloak.local`, and `jobrunr.local`. Use your organization's CA for these `.local` names, or configure real DNS names consistently across the routes, certificate, and OAuth settings. For example, with a certificate and private key provisioned by your CA:
+
+```bash
+kubectl create namespace retailstore --dry-run=client -o yaml | kubectl apply -f -
+kubectl -n retailstore create secret tls retailstore-tls --cert=fullchain.pem --key=privkey.pem
+```
+
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:a88ad0158f2e6b48c1b420a82771735feae0b8dee367e0cb32d0e9d62a5a1759 -->
+
+Publish port 443 to NodePort 30443 for TLS termination at Envoy. Publish port 80 to NodePort 30080 for redirects to HTTPS. Ensure the retail webapp pods can resolve and reach `https://keycloak.local` through that HTTPS listener; the production overlay uses this issuer for OIDC discovery.
+
+On upgrades, run the following in Bash before applying `prod`. Delete the old Job first so it cannot restore the mapping. Then remove only `keycloak.local` from the live webapp Deployment, keeping any other aliases. The cleanup skips the patch if the hostname is already absent; the overlay’s `hostAliases: []` does not reliably clear aliases added to the live Deployment. Stop the upgrade if any command fails.
+
+```bash
+(
+  set -e -o pipefail
+  kubectl -n retailstore delete job patch-webapp-hostaliases --ignore-not-found --wait=true
+  patch=$(kubectl -n retailstore get deployment retail-store-webapp -o json | jq -c '
+    (.spec.template.spec.hostAliases // []) as $current
+    | ($current | map(
+        if (.hostnames | index("keycloak.local")) != null then
+          .hostnames |= map(select(. != "keycloak.local"))
+          | select(.hostnames | length > 0)
+        else . end
+      )) as $updated
+    | select($current != $updated)
+    | {metadata: {resourceVersion: .metadata.resourceVersion},
+       spec: {template: {spec: {hostAliases: $updated}}}}
+  ')
+  if [ -n "$patch" ]; then
+    kubectl -n retailstore patch deployment retail-store-webapp --type=merge -p "$patch"
+  fi
+)
+```
+
+If the patch reports a conflict, rerun the cleanup to read the latest Deployment before applying `prod`.
+
+<!-- /coderabbit-ai-generated:v1 -->
+
+Provision a separate `jobrunr-auth` Secret for production. Use `htpasswd -cs jobrunr.htpasswd jobrunr-admin` to generate an Envoy compatible `{SHA}` entry with a strong password, and store the generated file as the `.htpasswd` key:
+
+```bash
+kubectl -n retailstore create secret generic jobrunr-auth --from-file=.htpasswd=jobrunr.htpasswd
+```
+
+If upgrading an existing deployment, replace the existing Secret's data with the new `.htpasswd` entry. The production overlay excludes the local test credential.
+
 To apply the production overlay safely:
 
 ```bash
 cd deployment/k8s
-./deploy-prod.sh
+./deploy.sh prod
 ```
 
 **Note on Operator Sequencing (Step 4):**
-The `deploy-prod.sh` script performs a critical sequencing step. It explicitly runs `kubectl apply -f overlays/prod/strimzi-operator.yaml` *before* running Kustomize. Kustomize evaluates the entire resource tree and patches dynamically, which can lead to it inadvertently dropping or mis-sequencing Operator deployments when combined with global patches. By applying the operator natively first, you ensure the `Kafka` and `KafkaNodePool` Custom Resources declared in the Kustomization will successfully bind to an active operator controller.
+The `deploy.sh prod` command performs a critical sequencing step. It explicitly runs `kubectl apply -f overlays/prod/strimzi-operator.yaml` *before* running Kustomize. Kustomize evaluates the entire resource tree and patches dynamically, which can lead to it inadvertently dropping or mis-sequencing Operator deployments when combined with global patches. By applying the operator natively first, you ensure the `Kafka` and `KafkaNodePool` Custom Resources declared in the Kustomization will successfully bind to an active operator controller.
 
-### Teardown
+### Teardown and Cleanup
+
+To tear down an overlay deployment while leaving the Envoy Gateway controller running for other workloads:
 
 ```bash
-kind delete cluster --name kind
+cd deployment/k8s
+./undeploy.sh dev
+```
+
+Use `ci`, `staging`, or `prod` for the other full application overlays.
+
+To opt in to uninstalling Envoy Gateway release manifests as well:
+
+```bash
+UNINSTALL_ENVOY_GATEWAY=true ./undeploy.sh dev
 ```
 
 ## CI Workflow Validation Locally
@@ -219,7 +304,7 @@ sequence locally as follows:
 
 1. Create Kind with `deployment/k8s/kind-config.yaml`, including port mappings for 80 and 443.
 2. Pull and load every published `dockertmt/mmv2-<service>:0.0.1-SNAPSHOT` image with `kind load docker-image`.
-3. Install ingress-nginx and wait for its controller pod to become ready.
+3. Install Envoy Gateway and Gateway API CRDs, then wait for its controller deployment to become available.
 4. Apply `kubectl apply -k deployment/k8s/overlays/ci/`.
 5. Wait for PostgreSQL, Redis, Kafka, and Keycloak; then wait for config-server and service-registry; then wait for all application deployments. Use `kubectl rollout status` and `kubectl wait --for=condition=ready pod` with explicit timeouts such as `300s`.
 6. Add the local hostnames shown above to `/etc/hosts`.
@@ -232,18 +317,18 @@ CLIENT_SECRET=$(kubectl get secret webapp-oauth2-credentials -n retailstore -o j
 curl --fail -X POST http://keycloak.local/realms/retailstore/protocol/openid-connect/token \
   -d 'client_id=retailstore-webapp' -d "client_secret=$CLIENT_SECRET" \
   -d 'grant_type=password' \
-  -d 'username=retail' -d 'password=retail1234' | grep access_token
+  -d 'username=retail' -d 'password=demo-throwaway-retail-pass' | grep access_token
 ```
 
-The Kubernetes workflow skips container-stop circuit-breaker induction and validates the deployed services through ingress instead.
+The Kubernetes workflow skips container-stop circuit-breaker induction and validates the deployed services through Gateway API instead.
 
 ## Troubleshooting
 
 - **ImagePullBackOff**: Confirm every image was loaded into Kind and that the CI overlay uses `IfNotPresent`.
 - **Config-server ordering**: Inspect init containers and config-server logs if dependent pods restart.
 - **Service discovery**: Check service-registry logs and pod readiness before testing gateway routes.
-- **Keycloak hostname**: Verify `keycloak.local` and `retailstore.local` resolve to the ingress address.
-- **Ingress readiness**: Check the ingress-nginx controller pod and events if host requests fail.
+- **Keycloak hostname**: Verify `keycloak.local` and `retailstore.local` resolve to the gateway address.
+- **Gateway readiness**: Check the envoy-gateway controller and envoy proxy pods if host requests fail.
 
 ## CI Diagnostics
 
@@ -285,7 +370,7 @@ import used in base/dev/CI.
 2. After Keycloak passes its readiness probe, the **`keycloak-terraform-runner`
    Job** runs automatically.
 3. The Job applies `deployment/terraform/keycloak/` using the
-   `mrparkers/keycloak` provider, creating the realm, client, roles, and users
+   official `keycloak/keycloak` provider, creating the realm, client, roles, and users
    if they do not already exist — or updating them if they differ from the
    declared state.
 4. The runner then provisions seed-user passwords through Keycloak's Admin API;
@@ -298,7 +383,7 @@ against the internal CA mounted from `keycloak-internal-ca`.
 
 ### Waiting for the Job
 
-`deploy-prod.sh` and the E2E script poll both terminal Job conditions. They
+`deploy.sh prod` and the E2E script poll both terminal Job conditions. They
 proceed only when `Complete=True`; when `Failed=True`, they immediately print
 the Job description, pod status, and all container logs before exiting
 non-zero. The same diagnostics are printed if neither condition is reached
@@ -349,14 +434,32 @@ kubectl get secret tfstate-default-keycloak-realm -n retailstore
 
 ### Optional local Terraform service (Docker Compose)
 
-The Terraform service is available in both compose stacks as an opt-in profile:
+The Terraform service is available in both compose stacks as an opt-in profile.
+Docker Compose pulls the pre-built runner image (`dockertmt/mmv2-keycloak-terraform-runner:0.0.1-SNAPSHOT`)
+from DockerHub. Run these commands from the repository root:
 
 ```bash
 # Standard flow (default) — uses --import-realm
-docker compose up keycloak
+docker compose -f deployment/docker-compose.yml up keycloak
 
 # Terraform flow (recommended forward-looking path)
-docker compose --profile terraform up terraform
+docker compose -f deployment/docker-compose.yml --profile terraform up terraform
+```
+
+To refresh the snapshot image tag from DockerHub:
+
+```bash
+# Default stack
+docker compose -f deployment/docker-compose.yml pull terraform
+
+# Tools stack
+docker compose -f deployment/docker-compose-tools.yml pull terraform
+```
+
+For unpublished local runner modifications, build the runner image locally before starting Compose:
+
+```bash
+docker build -t dockertmt/mmv2-keycloak-terraform-runner:0.0.1-SNAPSHOT -f deployment/terraform/Dockerfile deployment/terraform/
 ```
 
 The `terraform` service uses `-backend=false` locally so no state Secret is

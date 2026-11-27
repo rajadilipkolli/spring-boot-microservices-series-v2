@@ -32,15 +32,27 @@ echo "[entrypoint] Keycloak is ready."
 # Write provider cache + state files into /tmp so the read-only root filesystem
 # and non-root volume mount constraints are satisfied.
 export TF_DATA_DIR="/tmp/.terraform"
+LOCK_TIMEOUT="60s"
 
 echo "[entrypoint] Running terraform init ..."
-terraform init -input=false
+terraform init -input=false -lockfile=readonly
+
+echo "[entrypoint] Checking for legacy Keycloak provider state ..."
+STATE_JSON=$(terraform state pull 2>/dev/null || true)
+if [ -n "$STATE_JSON" ] && echo "$STATE_JSON" | jq -e '.resources[]? | select(.provider | contains("registry.terraform.io/mrparkers/keycloak"))' >/dev/null 2>&1; then
+  echo "[entrypoint] Legacy mrparkers/keycloak provider found in state. Replacing provider..."
+  terraform state replace-provider -auto-approve -lock-timeout="${LOCK_TIMEOUT}" \
+    registry.terraform.io/mrparkers/keycloak registry.terraform.io/keycloak/keycloak
+  echo "[entrypoint] Provider replacement complete."
+else
+  echo "[entrypoint] No legacy provider migration necessary."
+fi
 
 echo "[entrypoint] Running terraform plan ..."
-terraform plan -input=false -out=/tmp/tfplan
+terraform plan -input=false -lock-timeout="${LOCK_TIMEOUT}" -out=/tmp/tfplan
 
 echo "[entrypoint] Running terraform apply ..."
-terraform apply -input=false /tmp/tfplan
+terraform apply -input=false -lock-timeout="${LOCK_TIMEOUT}" /tmp/tfplan
 
 echo "[entrypoint] Terraform apply complete."
 

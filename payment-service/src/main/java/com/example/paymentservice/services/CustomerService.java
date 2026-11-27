@@ -1,7 +1,8 @@
 /*** Licensed under MIT License Copyright (c) 2022-2026 Raja Kolli. ***/
 package com.example.paymentservice.services;
 
-import com.example.paymentservice.config.logging.Loggable;
+import com.example.common.dto.PagedResult;
+import com.example.common.logging.Loggable;
 import com.example.paymentservice.exception.CustomerExistsException;
 import com.example.paymentservice.exception.CustomerNotFoundException;
 import com.example.paymentservice.jooq.tables.records.CustomersRecord;
@@ -9,16 +10,13 @@ import com.example.paymentservice.mapper.CustomerMapper;
 import com.example.paymentservice.model.query.FindCustomersQuery;
 import com.example.paymentservice.model.request.CustomerRequest;
 import com.example.paymentservice.model.response.CustomerResponse;
-import com.example.paymentservice.model.response.PagedResult;
 import com.example.paymentservice.repositories.CustomerRepository;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import org.jooq.OrderField;
-import org.postgresql.util.PSQLException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,19 +37,20 @@ public class CustomerService {
     }
 
     /**
-     * Fetches a sorted customer page with counts and navigation metadata.
+     * Fetches a sorted page of active customers with active counts and navigation metadata.
      *
-     * @param findCustomersQuery the one-based page number, page size, and sort options
-     * @return the requested page of customer responses
-     * @throws IllegalArgumentException if the page number or page size is less than one
+     * @param findCustomersQuery the zero-based page index, positive page size, and sort options
+     * @return the requested page of customer responses with a one-based page number
+     * @throws IllegalArgumentException if the page index is negative or the page size is less than
+     *     one
      */
     public PagedResult<CustomerResponse> findAllCustomers(FindCustomersQuery findCustomersQuery) {
 
         int pageNo = findCustomersQuery.pageNo();
         int pageSize = findCustomersQuery.pageSize();
 
-        if (pageNo < 1) {
-            throw new IllegalArgumentException("Page number must be at least 1");
+        if (pageNo < 0) {
+            throw new IllegalArgumentException("Page number must be at least 0");
         }
 
         if (pageSize < 1) {
@@ -65,37 +64,38 @@ public class CustomerService {
                 findCustomersQuery.sortBy(),
                 findCustomersQuery.sortDir());
 
-        int offset = (pageNo - 1) * pageSize;
+        int offset = pageNo * pageSize;
 
         List<OrderField<?>> orderFields =
                 customerMapper.toOrderFields(
                         findCustomersQuery.sortBy(), findCustomersQuery.sortDir());
 
-        long totalElements = customerRepository.count();
+        long totalElements = customerRepository.countActive();
 
-        List<CustomersRecord> records = customerRepository.findAll(offset, pageSize, orderFields);
+        List<CustomersRecord> records =
+                customerRepository.findActiveAll(offset, pageSize, orderFields);
 
         List<CustomerResponse> data = customerMapper.toListResponse(records);
 
         int totalPages = (int) Math.ceil((double) totalElements / pageSize);
 
-        boolean isFirst = pageNo == 1;
-        boolean isLast = pageNo >= totalPages;
-        boolean hasNext = pageNo < totalPages;
-        boolean hasPrevious = pageNo > 1 && totalElements > 0;
+        boolean isFirst = pageNo == 0;
+        boolean isLast = totalPages == 0 || pageNo >= totalPages - 1;
+        boolean hasNext = pageNo < totalPages - 1;
+        boolean hasPrevious = pageNo > 0 && totalElements > 0;
 
         return new PagedResult<>(
-                data, totalElements, pageNo, totalPages, isFirst, isLast, hasNext, hasPrevious);
+                data, totalElements, pageNo + 1, totalPages, isFirst, isLast, hasNext, hasPrevious);
     }
 
     /**
-     * Finds customer details by identifier.
+     * Finds active customer details by identifier.
      *
      * @param id the customer identifier
-     * @return the matching response, or empty if absent
+     * @return the matching response, or empty if absent or deleted
      */
     public Optional<CustomerResponse> findCustomerById(Long id) {
-        return customerRepository.findById(id).map(CustomerResponse::toResponse);
+        return customerRepository.findActiveById(id).map(CustomerResponse::toResponse);
     }
 
     /**
@@ -126,7 +126,8 @@ public class CustomerService {
      * @return the persisted customer response
      * @throws CustomerExistsException if the email is already present or a concurrent insert
      *     violates the customer email constraint
-     * @throws DataIntegrityViolationException if another database integrity constraint fails
+     * @throws org.springframework.dao.DataIntegrityViolationException if another database integrity
+     *     constraint fails
      */
     @Transactional
     public CustomerResponse saveCustomer(CustomerRequest customerRequest) {
@@ -138,38 +139,10 @@ public class CustomerService {
                     "Customer with email " + normalizedEmail + " already exists.");
         }
 
-        CustomersRecord savedCustomer;
-        try {
-            CustomersRecord customerRecord = customerRequest.toCustomersRecord();
-            customerRecord.setEmail(normalizedEmail);
-            savedCustomer = customerRepository.saveCustomer(customerRecord);
-        } catch (DataIntegrityViolationException e) {
-            if (isEmailUniqueConstraintViolation(e)) {
-                throw new CustomerExistsException(
-                        "Customer with email " + normalizedEmail + " already exists.");
-            }
-            throw e;
-        }
+        CustomersRecord customerRecord = customerRequest.toCustomersRecord();
+        customerRecord.setEmail(normalizedEmail);
+        CustomersRecord savedCustomer = customerRepository.saveCustomer(customerRecord);
         return CustomerResponse.toResponse(savedCustomer);
-    }
-
-    /**
-     * Checks nested PostgreSQL causes for a unique violation of the customer email constraint.
-     *
-     * @param exception the persistence failure to inspect
-     * @return whether a cause identifies SQL state 23505 and the exact customer email constraint
-     */
-    private boolean isEmailUniqueConstraintViolation(DataIntegrityViolationException exception) {
-        for (Throwable cause = exception.getCause(); cause != null; cause = cause.getCause()) {
-            if (cause instanceof PSQLException sqlException
-                    && "23505".equals(sqlException.getSQLState())
-                    && sqlException.getServerErrorMessage() != null
-                    && "uc_customers_name_email_key"
-                            .equals(sqlException.getServerErrorMessage().getConstraint())) {
-                return true;
-            }
-        }
-        return false;
     }
 
     /**
@@ -178,7 +151,7 @@ public class CustomerService {
      * @param id the identifier of the customer to update
      * @param customerRequest the replacement contact details and available balance
      * @return the persisted customer response
-     * @throws CustomerNotFoundException if no customer has the supplied ID
+     * @throws CustomerNotFoundException if the customer is absent or deleted
      * @throws org.springframework.dao.OptimisticLockingFailureException if the customer changes
      *     during the update
      */
@@ -186,7 +159,7 @@ public class CustomerService {
     public CustomerResponse updateCustomer(Long id, CustomerRequest customerRequest) {
         CustomersRecord customersRecord =
                 customerRepository
-                        .findById(id)
+                        .findActiveById(id)
                         .orElseThrow(() -> new CustomerNotFoundException(id));
 
         // Update the customersRecord object with data from customerRequest
@@ -198,9 +171,14 @@ public class CustomerService {
         return CustomerResponse.toResponse(updatedCustomer);
     }
 
-    /** Deletes the customer by ID and returns the number of deleted rows. */
+    /**
+     * Soft deletes an active customer, incrementing its version without changing balances. Database
+     * failures propagate.
+     *
+     * @return one if marked deleted, or zero if absent or already deleted
+     */
     @Transactional
     public int deleteCustomerById(Long id) {
-        return customerRepository.deleteById(id);
+        return customerRepository.softDeleteById(id);
     }
 }

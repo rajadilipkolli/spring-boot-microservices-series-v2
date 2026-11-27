@@ -29,11 +29,10 @@ public class ServiceHealthCheckSimulation extends BaseLoadSimulation {
                             http("Gateway Health Check")
                                     .get("/actuator/health")
                                     .check(status().is(200)))
-                    .exec(
-                            session -> {
-                                LOGGER.info("Health checks passed successfully!");
-                                return session;
-                            });
+                    .exec(session -> {
+                        LOGGER.info("Health checks passed successfully!");
+                        return session;
+                    });
 
     // Constructor that will trigger the health checks
     public ServiceHealthCheckSimulation() {

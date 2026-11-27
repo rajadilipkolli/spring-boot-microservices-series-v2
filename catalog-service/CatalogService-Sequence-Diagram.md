@@ -8,6 +8,7 @@ sequenceDiagram
     participant Client as 🛒 Client<br/>(WebApp/API)
     participant Gateway as 🌐 API Gateway<br/>(Port: 8765)
     participant CatalogAPI as 📚 Catalog Service<br/>(Port: 18080)
+    participant Redis as ⚡ Redis Cache<br/>(Reactive Operations)
     participant CatalogDB as 🗄️ PostgreSQL<br/>(Products DB)
     participant InventoryProxy as 📦 Inventory Proxy<br/>(WebClient)
     participant InventoryService as 📦 Inventory Service<br/>(Port: 18181)
@@ -19,30 +20,38 @@ sequenceDiagram
     Note over Client, CircuitBreaker: 📚 Product Catalog Management Flow
     
     rect rgba(59, 130, 246, 0.3)
-        Note over Client, CatalogAPI: <span style="color: white">Product Retrieval Operations (Reactive)</span>
+        Note over Client, CatalogAPI: <span style="color: white">Product Retrieval Operations (Reactive & Cached)</span>
         Client->>Gateway: GET /catalog-service/api/catalog?pageNo=0&pageSize=10
         Gateway->>CatalogAPI: Forward paginated request
         CatalogAPI->>CatalogAPI: @Observed + @Loggable<br/>Create Pageable (reactive)
+        CatalogAPI->>Redis: redisOps.opsForValue().get(cacheKey)
         
-        CatalogAPI->>CatalogDB: Mono<Long> count()<br/>(R2DBC reactive query)
-        CatalogDB-->>CatalogAPI: Total products count
-        
-        CatalogAPI->>CatalogDB: Flux<Product> findAllBy(pageable)<br/>(R2DBC reactive pagination)
-        CatalogDB-->>CatalogAPI: Flux<Product> stream
-        
-        CatalogAPI->>CatalogAPI: Mono.zip(count, productList)<br/>(combine reactive streams)
-        CatalogAPI->>CatalogAPI: Flux.fromIterable(products)<br/>.map(productMapper::toProductResponse)
-        
-        CatalogAPI->>CatalogAPI: enrichWithAvailability()<br/>(inventory integration)
-        CatalogAPI->>InventoryProxy: getInventoryByProductCodes(productCodes)
-        InventoryProxy->>InventoryProxy: @CircuitBreaker + @RateLimiter<br/>+ @Retry + @TimeLimiter
-        InventoryProxy->>InventoryService: GET /api/inventory/product?codes=P1,P2,P3<br/>(WebClient reactive call)
-        InventoryService-->>InventoryProxy: Flux<InventoryResponse>
-        InventoryProxy-->>CatalogAPI: Inventory availability data
-        
-        CatalogAPI->>CatalogAPI: updateProductAvailability()<br/>(merge product + inventory data)
-        CatalogAPI-->>Gateway: Mono<PagedResult<ProductResponse>>
-        Gateway-->>Client: Paginated products with stock info
+        alt Cache Hit
+            Redis-->>CatalogAPI: Cached PagedResult<ProductResponse>
+            CatalogAPI-->>Gateway: Mono<PagedResult<ProductResponse>>
+            Gateway-->>Client: Paginated products from cache
+        else Cache Miss
+            CatalogAPI->>CatalogDB: Mono<Long> count()<br/>(R2DBC reactive query)
+            CatalogDB-->>CatalogAPI: Total products count
+            
+            CatalogAPI->>CatalogDB: Flux<Product> findAllBy(pageable)<br/>(R2DBC reactive pagination)
+            CatalogDB-->>CatalogAPI: Flux<Product> stream
+            
+            CatalogAPI->>CatalogAPI: Mono.zip(count, productList)<br/>(combine reactive streams)
+            CatalogAPI->>CatalogAPI: Flux.fromIterable(products)<br/>.map(productMapper::toProductResponse)
+            
+            CatalogAPI->>CatalogAPI: enrichWithAvailability()<br/>(inventory integration)
+            CatalogAPI->>InventoryProxy: getInventoryByProductCodes(productCodes)
+            InventoryProxy->>InventoryProxy: @CircuitBreaker + @RateLimiter<br/>+ @Retry + @TimeLimiter
+            InventoryProxy->>InventoryService: GET /inventory-service/api/inventory/product?codes=P1,P2,P3<br/>(WebClient reactive call)
+            InventoryService-->>InventoryProxy: Flux<InventoryResponse>
+            InventoryProxy-->>CatalogAPI: Inventory availability data
+            
+            CatalogAPI->>CatalogAPI: updateProductAvailability()<br/>(merge product + inventory data)
+            CatalogAPI->>Redis: redisOps.opsForValue().set(cacheKey, result, 5m)
+            CatalogAPI-->>Gateway: Mono<PagedResult<ProductResponse>>
+            Gateway-->>Client: Paginated products with stock info
+        end
     end
 
     rect rgba(34, 197, 94, 0.3)
@@ -271,7 +280,8 @@ sequenceDiagram
 
 ### 🏗️ **Reactive Architecture**
 - **Spring WebFlux**: Non-blocking reactive web framework
-- **R2DBC**: Reactive database connectivity with PostgreSQL
+- **Spring Data R2DBC**: Reactive database connectivity with PostgreSQL (`r2dbc-postgresql`)
+- **Redis Reactive Caching**: Distributed caching for product details and paginated listings with cache generation invalidation and ShedLock
 - **WebClient**: Reactive HTTP client for service-to-service communication
 - **Spring Cloud Stream**: Reactive Kafka integration with StreamBridge
 
@@ -349,16 +359,32 @@ graph TB
 ## Database Schema
 
 ```sql
--- Products table with catalog information
+-- Products table with catalog information (managed by Liquibase)
 CREATE TABLE products (
-    id BIGSERIAL PRIMARY KEY,
-    product_code VARCHAR(255) UNIQUE NOT NULL,
-    product_name VARCHAR(255) NOT NULL,
+    id BIGINT PRIMARY KEY,                      -- Assigned by TSID generator
+    product_code VARCHAR(255) UNIQUE NOT NULL,   -- TEXT in PostgreSQL
+    product_name VARCHAR(255) NOT NULL,          -- TEXT in PostgreSQL
     description TEXT,
-    price DECIMAL(10,2) NOT NULL,
+    price NUMERIC(19,2) NOT NULL,
     image_url VARCHAR(500),
-    created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    version BIGINT DEFAULT 0 NOT NULL,          -- Optimistic locking
+    deleted BOOLEAN DEFAULT false NOT NULL      -- Soft delete flag
+);
+
+-- Table for coordinating distributed cache invalidation generations
+CREATE TABLE product_cache_generation (
+    id INT PRIMARY KEY NOT NULL,
+    generation VARCHAR(36) NOT NULL
+);
+
+-- Table for transactional outbox events
+CREATE TABLE outbox_events (
+    id BIGINT PRIMARY KEY,
+    aggregate_type VARCHAR(255) NOT NULL,
+    aggregate_id VARCHAR(255) NOT NULL,
+    type VARCHAR(255) NOT NULL,
+    payload TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL
 );
 
 -- Indexes for performance

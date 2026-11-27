@@ -6,7 +6,7 @@
 
 package com.example.orderservice.services;
 
-import com.example.orderservice.config.logging.Loggable;
+import com.example.common.logging.Loggable;
 import com.example.orderservice.model.Address;
 import com.example.orderservice.model.request.OrderItemRequest;
 import com.example.orderservice.model.request.OrderRequest;
@@ -51,32 +51,27 @@ public class OrderGeneratorService {
                 .collect(Collectors.groupingBy(i -> i / BATCH_SIZE))
                 .values()
                 .parallelStream()
-                .forEach(
-                        batch -> {
-                            List<OrderRequest> orderRequests =
-                                    batch.stream()
-                                            .map(
-                                                    value -> {
-                                                        List<OrderItemRequest> orderItems =
-                                                                generateOrderItems(idempotencyKey);
-                                                        long customerId =
-                                                                RAND.nextLong(100)
-                                                                        + 1; // Range 1-100
-                                                        return new OrderRequest(
-                                                                customerId,
-                                                                orderItems,
-                                                                new Address(
-                                                                        "Junit Address1"
-                                                                                + customerId,
-                                                                        "AddressLine2" + customerId,
-                                                                        "city" + customerId,
-                                                                        "state" + customerId,
-                                                                        "zipCode" + customerId,
-                                                                        "country" + customerId));
-                                                    })
-                                            .toList();
-                            orderService.saveBatchOrders(orderRequests);
-                        });
+                .forEach(batch -> {
+                    List<OrderRequest> orderRequests =
+                            batch.stream()
+                                    .map(value -> {
+                                        List<OrderItemRequest> orderItems =
+                                                generateOrderItems(idempotencyKey);
+                                        long customerId = RAND.nextLong(100) + 1; // Range 1-100
+                                        return new OrderRequest(
+                                                customerId,
+                                                orderItems,
+                                                new Address(
+                                                        "Junit Address1" + customerId,
+                                                        "AddressLine2" + customerId,
+                                                        "city" + customerId,
+                                                        "state" + customerId,
+                                                        "zipCode" + customerId,
+                                                        "country" + customerId));
+                                    })
+                                    .toList();
+                    orderService.saveBatchOrders(orderRequests);
+                });
     }
 
     private static void validateBatchSize(Integer batchSize) {

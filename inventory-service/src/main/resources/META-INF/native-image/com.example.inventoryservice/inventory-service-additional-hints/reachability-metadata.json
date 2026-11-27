@@ -59,27 +59,6 @@
       "allDeclaredFields": true
     },
     {
-      "condition": {"typeReached": "com.example.inventoryservice.model.payload.OrderDto"},
-      "type": "com.example.inventoryservice.model.payload.OrderDto",
-      "allDeclaredConstructors": true,
-      "allDeclaredMethods": true,
-      "allDeclaredFields": true
-    },
-    {
-      "condition": {"typeReached": "com.example.inventoryservice.model.payload.OrderItemDto"},
-      "type": "com.example.inventoryservice.model.payload.OrderItemDto",
-      "allDeclaredConstructors": true,
-      "allDeclaredMethods": true,
-      "allDeclaredFields": true
-    },
-    {
-      "condition": {"typeReached": "com.example.inventoryservice.model.payload.ProductDto"},
-      "type": "com.example.inventoryservice.model.payload.ProductDto",
-      "allDeclaredConstructors": true,
-      "allDeclaredMethods": true,
-      "allDeclaredFields": true
-    },
-    {
       "condition": {"typeReached": "com.example.inventoryservice.model.request.InventoryRequest"},
       "type": "com.example.inventoryservice.model.request.InventoryRequest",
       "allDeclaredConstructors": true,
@@ -89,13 +68,6 @@
     {
       "condition": {"typeReached": "com.example.inventoryservice.model.response.InventoryResponse"},
       "type": "com.example.inventoryservice.model.response.InventoryResponse",
-      "allDeclaredConstructors": true,
-      "allDeclaredMethods": true,
-      "allDeclaredFields": true
-    },
-    {
-      "condition": {"typeReached": "com.example.inventoryservice.model.response.PagedResult"},
-      "type": "com.example.inventoryservice.model.response.PagedResult",
       "allDeclaredConstructors": true,
       "allDeclaredMethods": true,
       "allDeclaredFields": true

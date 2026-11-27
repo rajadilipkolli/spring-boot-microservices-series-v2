@@ -95,7 +95,7 @@ sequenceDiagram
 ## 📋 Code Implementation Mapping
 
 ### 1. Circuit Breaker Implementation
-**File:** `OrderController.java` (Lines 65-85)
+**File:** `OrderController.java`
 ```java
 @GetMapping("/{id}")
 @CircuitBreaker(name = "default", fallbackMethod = "hardcodedResponse")
@@ -119,13 +119,14 @@ public ResponseEntity<OrderResponse> getOrderById(
         .orElseThrow(() -> new OrderNotFoundException(id));
 }
 
-// Fallback method for circuit breaker
-ResponseEntity<String> hardcodedResponse(Long id, Exception ex) {
+// Fallback method for circuit breaker returning 503 SERVICE_UNAVAILABLE with empty OrderResponse
+ResponseEntity<OrderResponse> hardcodedResponse(Long id, Integer delay, Exception ex) {
     if (ex instanceof OrderNotFoundException orderNotFoundException) {
         throw orderNotFoundException; // Don't fallback for business exceptions
     }
-    log.error("Circuit breaker activated for order: {}", id, ex);
-    return ResponseEntity.ok("fallback-response for id : " + id);
+    log.error("Exception occurred: {}", LogSanitizer.sanitizeException(ex));
+    return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+            .body(OrderResponse.emptyResponse(id));
 }
 ```
 
@@ -133,30 +134,41 @@ ResponseEntity<String> hardcodedResponse(Long id, Exception ex) {
 - **Circuit Breaker:** `@CircuitBreaker(name = "default")`
 - **Rate Limiting:** `@RateLimiter(name = "default")`
 - **Bulkhead:** `@Bulkhead(name = "order-api")`
-- **Fallback Logic:** Exception-aware fallback method
+- **Fallback Logic:** Exception-aware fallback method returning HTTP 503 with an empty response body
 
 ### 2. Catalog Service Circuit Breaker
-**File:** `CatalogService.java` (Lines 25-40)
+**File:** `CatalogService.java`
 ```java
 @Service
 @Loggable
 public class CatalogService {
     
+    private final Logger log = LoggerFactory.getLogger(this.getClass());
     private final CatalogServiceProxy catalogServiceProxy;
     private final ApplicationProperties applicationProperties;
     
-    @CircuitBreaker(name = "default", fallbackMethod = "productsExistsDefaultValue")
-    public boolean productsExistsByCodes(List<String> productCodes) {
+    public CatalogService(
+            CatalogServiceProxy catalogServiceProxy, ApplicationProperties applicationProperties) {
+        this.catalogServiceProxy = catalogServiceProxy;
+        this.applicationProperties = applicationProperties;
+    }
+    
+    @CircuitBreaker(name = "catalog-service", fallbackMethod = "productsExistsDefaultValue")
+    public CatalogServiceProxy.ProductExistsResponse productsExistsByCodes(
+            List<String> productCodes) {
         return catalogServiceProxy.productsExistsByCodes(productCodes);
     }
     
     // Fallback method with configurable behavior
-    boolean productsExistsDefaultValue(List<String> productCodes, Exception e) {
-        log.error("Circuit breaker activated for productCodes: {}, Exception: {}", 
-            productCodes, e.getMessage());
+    CatalogServiceProxy.ProductExistsResponse productsExistsDefaultValue(
+            List<String> productCodes, Exception e) {
+        log.error(
+                "While fetching status for productCodes :{}, Exception Occurred : {}",
+                LogSanitizer.sanitizeCollection(productCodes),
+                LogSanitizer.sanitizeException(e));
         
-        // Configurable fallback behavior
-        return applicationProperties.byPassCircuitBreaker();
+        return new CatalogServiceProxy.ProductExistsResponse(
+                applicationProperties.byPassCircuitBreaker());
     }
 }
 ```

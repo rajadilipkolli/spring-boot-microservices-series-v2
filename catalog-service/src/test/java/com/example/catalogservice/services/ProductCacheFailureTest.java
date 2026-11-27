@@ -16,17 +16,20 @@ import static org.mockito.Mockito.when;
 import com.example.catalogservice.entities.Product;
 import com.example.catalogservice.mapper.ProductMapper;
 import com.example.catalogservice.model.request.ProductRequest;
-import com.example.catalogservice.model.response.InventoryResponse;
 import com.example.catalogservice.model.response.ProductResponse;
+import com.example.catalogservice.repositories.ProductCacheGenerationRepository;
 import com.example.catalogservice.repositories.ProductRepository;
+import com.example.common.dto.PagedResult;
 import io.hypersistence.tsid.TSID;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.redis.core.ReactiveRedisOperations;
 import org.springframework.data.redis.core.ReactiveValueOperations;
@@ -37,8 +40,10 @@ import reactor.test.StepVerifier;
 class ProductCacheFailureTest {
 
     private final ProductRepository repository = mock(ProductRepository.class);
+    private final ProductCacheGenerationRepository productCacheGeneration =
+            mock(ProductCacheGenerationRepository.class);
     private final ProductMapper mapper = mock(ProductMapper.class);
-    private final InventoryServiceProxy inventory = mock(InventoryServiceProxy.class);
+    private final ProductAvailabilityEnricher enricher = mock(ProductAvailabilityEnricher.class);
     private final OutboxService outbox = mock(OutboxService.class);
     private final ReactiveRedisOperations<String, Object> redis = mock();
     private final ReactiveValueOperations<String, Object> values = mock();
@@ -52,40 +57,37 @@ class ProductCacheFailureTest {
     @BeforeEach
     void setUp() {
         service = newService();
-        when(repository.findCacheGeneration()).thenAnswer(ignored -> Mono.just(generation.get()));
+        when(productCacheGeneration.findCacheGeneration())
+                .thenAnswer(ignored -> Mono.just(generation.get()));
         lenient()
-                .when(repository.updateCacheGeneration(anyString()))
-                .thenAnswer(
-                        invocation ->
-                                Mono.fromSupplier(
-                                        () -> {
-                                            generation.set(invocation.getArgument(0));
-                                            return 1;
-                                        }));
+                .when(productCacheGeneration.updateCacheGeneration(anyString()))
+                .thenAnswer(invocation ->
+                        Mono.fromSupplier(() -> {
+                            generation.set(invocation.getArgument(0));
+                            return 1;
+                        }));
         when(redis.opsForValue()).thenReturn(values);
         when(values.get(anyString()))
                 .thenAnswer(invocation -> Mono.justOrEmpty(cache.get(invocation.getArgument(0))));
         when(values.set(anyString(), any(), any(Duration.class)))
-                .thenAnswer(
-                        invocation -> {
-                            cache.put(invocation.getArgument(0), invocation.getArgument(1));
-                            return Mono.just(true);
-                        });
-        lenient().when(repository.findById(1L)).thenReturn(Mono.just(product));
+                .thenAnswer(invocation -> {
+                    cache.put(invocation.getArgument(0), invocation.getArgument(1));
+                    return Mono.just(true);
+                });
+        lenient().when(repository.findByIdAndDeletedFalse(1L)).thenReturn(Mono.just(product));
         lenient()
-                .when(repository.findByProductCodeAllIgnoreCase(anyString()))
+                .when(repository.findByProductCodeAllIgnoreCaseAndDeletedFalse(anyString()))
                 .thenReturn(Mono.just(product));
         when(mapper.toProductResponse(product))
-                .thenAnswer(
-                        ignored ->
-                                new ProductResponse(
-                                        1L,
-                                        "P001",
-                                        product.getProductName(),
-                                        "Description",
-                                        null,
-                                        BigDecimal.TEN,
-                                        false));
+                .thenAnswer(ignored ->
+                        new ProductResponse(
+                                1L,
+                                "P001",
+                                product.getProductName(),
+                                "Description",
+                                null,
+                                BigDecimal.TEN,
+                                false));
     }
 
     @Test
@@ -94,11 +96,33 @@ class ProductCacheFailureTest {
                 .thenReturn(Mono.error(new IllegalStateException("Redis unavailable")));
         when(values.set(anyString(), any(), any(Duration.class)))
                 .thenReturn(Mono.error(new IllegalStateException("Redis unavailable")));
-        when(inventory.getInventoryByProductCode("P001"))
-                .thenReturn(Mono.just(new InventoryResponse("P001", 5)));
-        when(inventory.getInventoryByProductCodes(any())).thenReturn(Flux.empty());
-        when(repository.count()).thenReturn(Mono.just(1L));
-        when(repository.findAllBy(any(Pageable.class))).thenReturn(Flux.just(product));
+        when(enricher.enrichWithAvailability(any(ProductResponse.class)))
+                .thenReturn(
+                        Mono.just(
+                                new ProductResponse(
+                                        1L,
+                                        "P001",
+                                        "Fresh",
+                                        "Description",
+                                        null,
+                                        BigDecimal.TEN,
+                                        false)));
+        when(enricher.enrichWithAvailability(any(), any(), any()))
+                .thenReturn(
+                        Mono.just(
+                                new PagedResult<>(
+                                        new PageImpl<>(
+                                                List.of(
+                                                        new ProductResponse(
+                                                                1L,
+                                                                "P001",
+                                                                "Fresh",
+                                                                "Description",
+                                                                null,
+                                                                BigDecimal.TEN,
+                                                                false))))));
+        when(repository.countByDeletedFalse()).thenReturn(Mono.just(1L));
+        when(repository.findAllByDeletedFalse(any(Pageable.class))).thenReturn(Flux.just(product));
 
         StepVerifier.create(service.findProductById(1L))
                 .assertNext(response -> assertThat(response.productName()).isEqualTo("Fresh"))
@@ -136,7 +160,7 @@ class ProductCacheFailureTest {
 
     @Test
     void databaseErrorsAreNotSwallowedAsCacheFailures() {
-        when(repository.findByProductCodeAllIgnoreCase("P001"))
+        when(repository.findByProductCodeAllIgnoreCaseAndDeletedFalse("P001"))
                 .thenReturn(Mono.error(new IllegalArgumentException("database failure")));
         StepVerifier.create(service.findProductByProductCode("P001", false))
                 .expectErrorMessage("database failure")
@@ -145,6 +169,13 @@ class ProductCacheFailureTest {
 
     private ProductService newService() {
         return new ProductService(
-                repository, mapper, inventory, outbox, redis, null, TSID.Factory.builder().build());
+                repository,
+                mapper,
+                outbox,
+                redis,
+                enricher,
+                null,
+                TSID.Factory.builder().withNode(1).build(),
+                productCacheGeneration);
     }
 }

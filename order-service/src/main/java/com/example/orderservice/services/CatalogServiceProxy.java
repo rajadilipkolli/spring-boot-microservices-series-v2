@@ -6,7 +6,7 @@
 
 package com.example.orderservice.services;
 
-import com.example.orderservice.config.logging.Loggable;
+import com.example.common.logging.Loggable;
 import java.util.List;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.RequestParam;

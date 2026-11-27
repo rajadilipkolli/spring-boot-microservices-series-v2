@@ -9,12 +9,21 @@ import org.jooq.OrderField;
 public interface CustomerRepository {
 
     /**
-     * Finds a customer by its identifier.
+     * Finds a customer by its identifier, including soft-deleted customers. Retained for payment
+     * processing.
      *
      * @param id the customer identifier
      * @return the matching record, or empty if absent
      */
     Optional<CustomersRecord> findById(Long id);
+
+    /**
+     * Finds an active customer by its identifier.
+     *
+     * @param id the customer identifier
+     * @return the matching active record, or empty if absent or deleted
+     */
+    Optional<CustomersRecord> findActiveById(Long id);
 
     /**
      * Finds a customer by an exact name match.
@@ -43,6 +52,16 @@ public interface CustomerRepository {
     List<CustomersRecord> findAll(int offset, int limit, List<OrderField<?>> orderFields);
 
     /**
+     * Fetches a sorted slice of active customer records.
+     *
+     * @param offset the number of rows to skip
+     * @param limit the maximum number of rows to return
+     * @param orderFields the sort expressions to apply
+     * @return the requested active customer records
+     */
+    List<CustomersRecord> findActiveAll(int offset, int limit, List<OrderField<?>> orderFields);
+
+    /**
      * Checks whether a customer has the supplied email address.
      *
      * @param email the normalized email address to match exactly
@@ -52,6 +71,9 @@ public interface CustomerRepository {
 
     /** Returns the total number of stored customers. */
     long count();
+
+    /** Returns the total number of active customers. */
+    long countActive();
 
     /**
      * Inserts customer records after normalizing emails and assigning missing IDs and versions.
@@ -73,7 +95,7 @@ public interface CustomerRepository {
     CustomersRecord saveCustomer(CustomersRecord requestCustomer);
 
     /**
-     * Deletes all customers along with all ledger entries, payment operations, and outbox events.
+     * Deletes all customers.
      *
      * @return the number of deleted customer rows
      */
@@ -88,32 +110,11 @@ public interface CustomerRepository {
     int deleteById(Long id);
 
     /**
-     * Atomically transfers funds from available to reserved balance if available balance is
-     * sufficient.
+     * Soft deletes the customer with the supplied identifier if active, incrementing its version
+     * without changing balances. Database failures propagate.
      *
-     * @param customerId the customer identifier
-     * @param amount the amount to reserve
-     * @return true if funds were reserved, false if insufficient funds or customer not found
+     * @param id the identifier of the customer to soft delete
+     * @return one if marked deleted, or zero if absent or already deleted
      */
-    boolean reserveFunds(Long customerId, java.math.BigDecimal amount);
-
-    /**
-     * Atomically deducts funds from reserved balance upon order confirmation.
-     *
-     * @param customerId the customer identifier
-     * @param amount the amount to capture
-     * @return true if funds were captured, false if insufficient reserved balance or customer not
-     *     found
-     */
-    boolean captureFunds(Long customerId, java.math.BigDecimal amount);
-
-    /**
-     * Atomically releases funds from reserved back to available balance upon order rollback.
-     *
-     * @param customerId the customer identifier
-     * @param amount the amount to release
-     * @return true if funds were released, false if insufficient reserved balance or customer not
-     *     found
-     */
-    boolean releaseFunds(Long customerId, java.math.BigDecimal amount);
+    int softDeleteById(Long id);
 }

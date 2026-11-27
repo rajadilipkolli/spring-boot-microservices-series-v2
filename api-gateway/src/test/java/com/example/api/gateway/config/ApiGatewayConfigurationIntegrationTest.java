@@ -47,10 +47,9 @@ class ApiGatewayConfigurationIntegrationTest extends AbstractIntegrationTest {
                 .expectHeader()
                 .exists("X-Trace-Id")
                 .expectBody(String.class)
-                .consumeWith(
-                        result -> {
-                            assertThat(result.getResponseBody()).contains("test route response");
-                        });
+                .consumeWith(result -> {
+                    assertThat(result.getResponseBody()).contains("test route response");
+                });
     }
 
     @Test
@@ -64,6 +63,8 @@ class ApiGatewayConfigurationIntegrationTest extends AbstractIntegrationTest {
                 .isOk()
                 .expectHeader()
                 .exists("X-Trace-Id")
+                .expectHeader()
+                .valueEquals("X-Response-Header", "Transformed")
                 .expectBody()
                 .jsonPath("$.headers.Myheader")
                 .isEqualTo("MyURI");

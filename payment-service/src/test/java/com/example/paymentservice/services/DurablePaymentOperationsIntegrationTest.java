@@ -9,8 +9,10 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 
+import com.example.common.dto.OrderDto;
 import com.example.paymentservice.common.AbstractIntegrationTest;
 import com.example.paymentservice.config.ApplicationProperties;
+import com.example.paymentservice.exception.CustomerNotFoundException;
 import com.example.paymentservice.jooq.tables.LedgerEntries;
 import com.example.paymentservice.jooq.tables.OutboxEvents;
 import com.example.paymentservice.jooq.tables.PaymentOperations;
@@ -18,7 +20,6 @@ import com.example.paymentservice.jooq.tables.records.CustomersRecord;
 import com.example.paymentservice.jooq.tables.records.LedgerEntriesRecord;
 import com.example.paymentservice.jooq.tables.records.OutboxEventsRecord;
 import com.example.paymentservice.jooq.tables.records.PaymentOperationsRecord;
-import com.example.paymentservice.model.payload.OrderDto;
 import com.example.paymentservice.services.provider.PaymentProviderPort;
 import com.example.paymentservice.services.provider.ProviderCommand;
 import com.example.paymentservice.services.provider.ProviderResult;
@@ -46,9 +47,6 @@ class DurablePaymentOperationsIntegrationTest extends AbstractIntegrationTest {
     /** Clears payment state and creates a customer with 100 available and no reserved funds. */
     @BeforeEach
     void setUp() {
-        dslContext.deleteFrom(LedgerEntries.LEDGER_ENTRIES).execute();
-        dslContext.deleteFrom(PaymentOperations.PAYMENT_OPERATIONS).execute();
-        dslContext.deleteFrom(OutboxEvents.OUTBOX_EVENTS).execute();
         customerRepository.deleteAll();
         Faker faker = new Faker();
         CustomersRecord record = new CustomersRecord();
@@ -243,7 +241,8 @@ class DurablePaymentOperationsIntegrationTest extends AbstractIntegrationTest {
                             blockLatch.await(10, TimeUnit.SECONDS);
                         } catch (InterruptedException ignored) {
                         }
-                        customerRepository.reserveFunds(command.customerId(), command.amount());
+                        customerBalanceRepository.reserveFunds(
+                                command.customerId(), command.amount());
                         return ProviderResult.accept();
                     }
 
@@ -262,7 +261,8 @@ class DurablePaymentOperationsIntegrationTest extends AbstractIntegrationTest {
                 new ApplicationProperties(),
                 jsonMapper,
                 new SimpleMeterRegistry(),
-                transactionManager);
+                transactionManager,
+                new OrderPricingCalculator());
     }
 
     /**
@@ -335,7 +335,8 @@ class DurablePaymentOperationsIntegrationTest extends AbstractIntegrationTest {
                     @Override
                     public ProviderResult execute(String downstreamKey, ProviderCommand command) {
                         if (callCount.incrementAndGet() == 1) {
-                            customerRepository.reserveFunds(command.customerId(), command.amount());
+                            customerBalanceRepository.reserveFunds(
+                                    command.customerId(), command.amount());
                             throw new com.example.paymentservice.services.provider
                                     .ProviderTimeoutException("Simulated timeout", null);
                         }
@@ -358,7 +359,8 @@ class DurablePaymentOperationsIntegrationTest extends AbstractIntegrationTest {
                         new ApplicationProperties(),
                         jsonMapper,
                         new SimpleMeterRegistry(),
-                        transactionManager);
+                        transactionManager,
+                        new OrderPricingCalculator());
 
         OrderDto initial = customEngine.processReserve(order);
         assertThat(initial.status()).isEqualTo("PENDING");
@@ -526,7 +528,7 @@ class DurablePaymentOperationsIntegrationTest extends AbstractIntegrationTest {
                             assertThat(releaseFirst.await(5, TimeUnit.SECONDS)).isTrue();
                             return result;
                         })
-                .when(customerRepository)
+                .when(customerBalanceRepository)
                 .reserveFunds(customer.getId(), BigDecimal.TEN);
 
         CompletableFuture<ProviderResult> first =
@@ -539,15 +541,14 @@ class DurablePaymentOperationsIntegrationTest extends AbstractIntegrationTest {
                     CompletableFuture.supplyAsync(
                             () -> ledgerAdapter.execute(operation.getDownstreamKey(), command));
             await().atMost(Duration.ofSeconds(1))
-                    .untilAsserted(
-                            () ->
-                                    assertThat(
-                                                    dslContext.fetchCount(
-                                                            dslContext
-                                                                    .selectFrom("pg_locks")
-                                                                    .where(
-                                                                            "locktype = 'advisory' and not granted")))
-                                            .isPositive());
+                    .untilAsserted(() ->
+                            assertThat(
+                                            dslContext.fetchCount(
+                                                    dslContext
+                                                            .selectFrom("pg_locks")
+                                                            .where(
+                                                                    "locktype = 'advisory' and not granted")))
+                                    .isPositive());
         } finally {
             releaseFirst.countDown();
         }
@@ -557,6 +558,86 @@ class DurablePaymentOperationsIntegrationTest extends AbstractIntegrationTest {
         assertThat(mutations).hasValue(1);
         assertThat(customerDAO.findById(customer.getId()).orElseThrow().getAmountAvailable())
                 .isEqualByComparingTo("90");
+    }
+
+    @Test
+    void shouldRejectReservationWhenCustomerDeletedAfterValidation() {
+        doAnswer(
+                        invocation -> {
+                            customerRepository.softDeleteById(customer.getId());
+                            return invocation.callRealMethod();
+                        })
+                .when(customerBalanceRepository)
+                .reserveFunds(customer.getId(), new BigDecimal("10.00"));
+
+        OrderDto result =
+                paymentOperationEngine.processReserve(order(9998L, "deleted-after-validation"));
+
+        assertThat(result.status()).isEqualTo("REJECT");
+        CustomersRecord retained = customerRepository.findById(customer.getId()).orElseThrow();
+        assertThat(retained.getDeleted()).isTrue();
+        assertThat(retained.getAmountAvailable()).isEqualByComparingTo("100");
+        assertThat(retained.getAmountReserved()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(
+                        ledgerRepository
+                                .findByDownstreamKey(
+                                        paymentOperationRepository
+                                                .findByOperationKey("payment:9998:RESERVE")
+                                                .orElseThrow()
+                                                .getDownstreamKey())
+                                .orElseThrow()
+                                .getStatus())
+                .isEqualTo("REJECT");
+    }
+
+    @Test
+    void softDeletedCustomerRejectsNewReservationButAllowsExistingSettlement() {
+        // Soft delete the customer
+        customerRepository.softDeleteById(customer.getId());
+
+        OrderDto newOrder = order(9999L, "attempt-soft-deleted");
+        // New reservation for soft-deleted customer should fail with CustomerNotFoundException
+        assertThatThrownBy(() -> paymentOperationEngine.processReserve(newOrder))
+                .isInstanceOf(CustomerNotFoundException.class);
+
+        // Reactivate customer to create a completed reservation
+        customerDAO.deleteAll();
+        CustomersRecord record = new CustomersRecord();
+        record.setName("Customer 2");
+        record.setEmail("cust2@example.com");
+        record.setPhone("1234567890");
+        record.setAddressLine1("Street 1");
+        record.setCity("City");
+        record.setState("State");
+        record.setZipCode("12345");
+        record.setCountry("Country");
+        record.setAmountAvailable(BigDecimal.valueOf(100.00));
+        record.setAmountReserved(BigDecimal.ZERO);
+        CustomersRecord activeCust = customerRepository.saveCustomer(record);
+
+        OrderDto existingOrder =
+                new OrderDto(
+                        8888L,
+                        activeCust.getId(),
+                        "NEW",
+                        "INVENTORY",
+                        List.of(new OrderDto.OrderItemDto(1L, "p1", 1, BigDecimal.TEN)),
+                        "existing-reserve");
+        OrderDto reserveResult = paymentOperationEngine.processReserve(existingOrder);
+        assertThat(reserveResult.status()).isEqualTo("ACCEPT");
+
+        // Now soft delete the customer
+        customerRepository.softDeleteById(activeCust.getId());
+
+        // Replay of existing reservation with existing operation key should succeed using retained
+        // lookup
+        OrderDto replayResult = paymentOperationEngine.processReserve(existingOrder);
+        assertThat(replayResult.status()).isEqualTo("ACCEPT");
+
+        // Settlement (capture) on retained soft-deleted customer should succeed
+        paymentOperationEngine.processSettlement(existingOrder, "CAPTURE");
+        CustomersRecord settled = customerRepository.findById(activeCust.getId()).orElseThrow();
+        assertThat(settled.getAmountReserved()).isEqualByComparingTo("0.00");
     }
 
     /**

@@ -21,12 +21,18 @@ import java.math.BigDecimal;
 import java.time.Duration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.CacheManager;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
 class ProductServiceCachingIntegrationTest extends AbstractIntegrationTest {
+
+    @Autowired private CacheManager cacheManager;
+
+    @Autowired private ProductGeneratorService productGeneratorService;
 
     @MockitoBean private InventoryServiceProxy inventoryServiceProxy;
 
@@ -58,6 +64,16 @@ class ProductServiceCachingIntegrationTest extends AbstractIntegrationTest {
         StepVerifier.create(redisOps.hasKey(cacheKey("products:0_10_id_asc")))
                 .expectNext(true)
                 .verifyComplete();
+        assertThat(redisOps.getExpire(cacheKey("products:0_10_id_asc")).block())
+                .isPositive()
+                .isLessThanOrEqualTo(Duration.ofMinutes(5));
+    }
+
+    @Test
+    void springProductsCacheHasConfiguredRedisExpiration() {
+        cacheManager.getCache("products").put("ttl-test", "value");
+        assertThat(redisOps.getExpire("products::ttl-test").block())
+                .isBetween(Duration.ofMinutes(9), Duration.ofMinutes(10));
     }
 
     /**
@@ -71,15 +87,14 @@ class ProductServiceCachingIntegrationTest extends AbstractIntegrationTest {
         String expectedCacheKey = cacheKey("productCode:p001");
         assertThat(redisOps.hasKey(expectedCacheKey).block()).isTrue();
 
-        Product productInDb = productRepository.findByProductCodeAllIgnoreCase("P001").block();
+        Product productInDb =
+                productRepository.findByProductCodeAllIgnoreCaseAndDeletedFalse("P001").block();
         productInDb.setProductName("Bypassed Name Update");
         productInDb = productRepository.save(productInDb).block();
 
         StepVerifier.create(productService.findProductByProductCode("p001", false))
-                .consumeNextWith(
-                        response ->
-                                assertThat(response.productName())
-                                        .isEqualTo(initialResponse.productName()))
+                .consumeNextWith(response ->
+                        assertThat(response.productName()).isEqualTo(initialResponse.productName()))
                 .verifyComplete();
 
         productService
@@ -94,9 +109,8 @@ class ProductServiceCachingIntegrationTest extends AbstractIntegrationTest {
                 .block();
         assertThat(redisOps.hasKey(expectedCacheKey).block()).isFalse();
         StepVerifier.create(productService.findProductByProductCode("renamed", false))
-                .consumeNextWith(
-                        response ->
-                                assertThat(response.productName()).isEqualTo("Proper Update Name"))
+                .consumeNextWith(response ->
+                        assertThat(response.productName()).isEqualTo("Proper Update Name"))
                 .verifyComplete();
         StepVerifier.create(productService.findProductByProductCode("P001", false))
                 .expectError(ProductNotFoundException.class)
@@ -106,7 +120,8 @@ class ProductServiceCachingIntegrationTest extends AbstractIntegrationTest {
     /** Verifies product cache expiry and page generation changes after product mutations. */
     @Test
     void idCacheExpiresAndMutationsChangePageGeneration() {
-        Product product = productRepository.findByProductCodeAllIgnoreCase("P001").block();
+        Product product =
+                productRepository.findByProductCodeAllIgnoreCaseAndDeletedFalse("P001").block();
         when(inventoryServiceProxy.getInventoryByProductCode("P001"))
                 .thenReturn(Mono.just(new InventoryResponse("P001", 5)));
         productService.findProductById(product.getId()).block();
@@ -124,25 +139,34 @@ class ProductServiceCachingIntegrationTest extends AbstractIntegrationTest {
                 .block();
         assertThat(cacheKey("products:0_10_id_asc")).isNotEqualTo(beforeUpdate);
 
-        String beforeDelete = productRepository.findCacheGeneration().block();
+        String beforeDelete = productCacheGenerationRepository.findCacheGeneration().block();
         productService.deleteProductById(product.getId()).block();
-        assertThat(productRepository.findCacheGeneration().block()).isNotEqualTo(beforeDelete);
+        assertThat(productCacheGenerationRepository.findCacheGeneration().block())
+                .isNotEqualTo(beforeDelete);
 
-        String beforeSave = productRepository.findCacheGeneration().block();
+        String beforeSave = productCacheGenerationRepository.findCacheGeneration().block();
         productService
                 .saveProduct(
                         new ProductRequest(
-                                "P001", "Created", "Created", null, BigDecimal.valueOf(20)))
+                                "P002", "Created", "Created", null, BigDecimal.valueOf(20)))
                 .block();
-        assertThat(productRepository.findCacheGeneration().block()).isNotEqualTo(beforeSave);
+        assertThat(productCacheGenerationRepository.findCacheGeneration().block())
+                .isNotEqualTo(beforeSave);
+        productRepository.deleteByProductCodeAllIgnoreCase("P002").block();
 
-        String beforeGenerate = productRepository.findCacheGeneration().block();
-        productService.generateProducts("cache-test", 1).block();
-        assertThat(productRepository.findCacheGeneration().block()).isNotEqualTo(beforeGenerate);
-        productRepository.deleteByProductCodeAllIgnoreCase("ProductCode_cache-test_0").block();
+        String beforeGenerate = productCacheGenerationRepository.findCacheGeneration().block();
+        productGeneratorService.generateAndSaveProducts("cache-test", 1).block();
+        assertThat(productCacheGenerationRepository.findCacheGeneration().block())
+                .isNotEqualTo(beforeGenerate);
+        String generatedCode =
+                productGeneratorService
+                        .generateProducts("cache-test", 1)
+                        .blockFirst()
+                        .productCode();
+        productRepository.deleteByProductCodeAllIgnoreCase(generatedCode).block();
     }
 
     private String cacheKey(String key) {
-        return key + ":" + productRepository.findCacheGeneration().block();
+        return key + ":" + productCacheGenerationRepository.findCacheGeneration().block();
     }
 }

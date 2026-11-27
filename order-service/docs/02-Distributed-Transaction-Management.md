@@ -9,7 +9,7 @@ The Order Service implements the Saga Pattern using choreography-based distribut
 graph TB
     subgraph "🛍️ Order Service"
         OS[OrderService] --> |"1. Create Order"| DB[(PostgreSQL)]
-        OS --> |"2. Publish Event"| KP[KafkaProducer]
+        OS --> |"2. Outbox Publish"| EEC[Spring Modulith Outbox]
     end
     
     subgraph "💳 Payment Service"
@@ -25,12 +25,12 @@ graph TB
     subgraph "🌊 Saga Coordinator (Kafka Streams)"
         POT --> SC[Stream Coordinator]
         SOT --> SC
-        SC --> |"Join & Decide"| OMS[OrderManageService]
+        SC --> |"Correlate & Decide"| OMS[OrderManageService]
+        OMS --> |"Update Status"| DB
         OMS --> |"Final Status"| OT[orders topic]
-        OT --> |"Update Order"| DB
     end
     
-    KP --> OT
+    EEC --> OT
     
     style SC fill:#ec4899,color:#ffffff
     style OMS fill:#f59e0b,color:#ffffff
@@ -69,9 +69,9 @@ stateDiagram-v2
 ## 📋 Code Implementation Mapping
 
 ### 1. Transaction Initiation
-**File:** `OrderService.java` (Lines 70-90)
+**File:** `OrderService.java`
 ```java
-@Transactional
+@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
 public OrderResponse saveOrder(OrderRequest orderRequest) {
     // Step 1: Validate products exist
     List<String> productCodes = orderRequest.items().stream()
@@ -79,53 +79,73 @@ public OrderResponse saveOrder(OrderRequest orderRequest) {
         .map(String::toUpperCase)
         .toList();
     
-    if (productsExistsAndInStock(productCodes)) {
-        // Step 2: Create order in NEW status (local transaction)
-        Order orderEntity = this.orderMapper.orderRequestToEntity(orderRequest);
-        Order savedOrder = this.orderRepository.save(orderEntity);
-        
-        // Step 3: Publish event to start saga (async)
-        OrderDto persistedOrderDto = this.orderMapper.toDto(savedOrder);
-        kafkaOrderProducer.sendOrder(persistedOrderDto);
-        
-        return this.orderMapper.toResponse(savedOrder);
+    if (productsExistsAndInStock(productCodes).exists()) {
+        log.debug("ProductCodes :{} exists in db, hence proceeding", productCodes);
+        return transactionTemplate.execute(_ -> persistOrder(orderRequest));
     } else {
         throw new ProductNotFoundException(productCodes);
     }
 }
+
+private OrderResponse persistOrder(OrderRequest orderRequest) {
+    Order orderEntity = this.orderMapper.orderRequestToEntity(orderRequest);
+    Order savedOrder = this.orderRepository.save(orderEntity);
+    OrderDto persistedOrderDto =
+            this.orderMapper.toDto(savedOrder).withAttemptId(UUID.randomUUID().toString());
+    eventPublisher.publishEvent(persistedOrderDto);
+    return this.orderMapper.toResponse(savedOrder);
+}
 ```
 
-**Transaction Boundary:** Local database transaction + async event publishing
+**Transaction Boundary:** TransactionTemplate handles local persistence + Spring Modulith transactional outbox event publishing.
 
 ### 2. Saga Coordination Logic
-**File:** `KafkaStreamsConfig.java` (Lines 85-100)
+**File:** `KafkaStreamsConfig.java`
 ```java
 @Bean
-KStream<Long, OrderDto> stream(StreamsBuilder kafkaStreamBuilder) {
-    Serde<OrderDto> orderSerde = new JsonSerde<>(OrderDto.class);
-    
-    // Create streams for payment and inventory responses
-    KStream<Long, OrderDto> paymentStream = kafkaStreamBuilder.stream(
-        PAYMENT_ORDERS_TOPIC, Consumed.with(Serdes.Long(), orderSerde));
-    
-    // Join payment and inventory streams within time window
-    paymentStream
-        .join(
-            kafkaStreamBuilder.stream(STOCK_ORDERS_TOPIC),
-            orderManageService::confirm,  // Saga decision logic
-            JoinWindows.ofTimeDifferenceWithNoGrace(Duration.ofSeconds(10)),
-            StreamJoined.with(Serdes.Long(), orderSerde, orderSerde))
-        .peek((k, o) -> log.info("Saga decision: {} for order: {}", o.status(), k))
-        .to(ORDERS_TOPIC);  // Publish final decision
-    
+KStream<String, OrderDto> stream(
+        StreamsBuilder kafkaStreamBuilder, Serde<@NonNull OrderDto> orderSerde) {
+
+    KStream<String, OrderDto> paymentStream =
+            kafkaStreamBuilder.stream(
+                    PAYMENT_ORDERS_TOPIC, Consumed.with(Serdes.String(), orderSerde));
+
+    correlateByAttempt(paymentStream)
+            .join(
+                    correlateByAttempt(
+                            kafkaStreamBuilder.stream(
+                                    STOCK_ORDERS_TOPIC,
+                                    Consumed.with(Serdes.String(), orderSerde))),
+                    orderManageService::confirm,  // Saga decision logic
+                    JoinWindows.ofTimeDifferenceAndGrace(
+                            Duration.ofSeconds(30), Duration.ofSeconds(30)),
+                    StreamJoined.with(Serdes.String(), orderSerde, orderSerde))
+            .filter((key, order) -> order != null)
+            .selectKey((key, order) -> order.orderId().toString())
+            .peek((k, o) -> log.debug("Output of Stream : {} for key :{}", o, k))
+            .to(ORDERS_TOPIC, Produced.with(Serdes.String(), orderSerde));
+
+    paymentStream.print(Printed.toSysOut());
+
     return paymentStream;
+}
+
+private KStream<String, OrderDto> correlateByAttempt(KStream<String, OrderDto> stream) {
+    return stream.filter(
+                    (key, order) ->
+                            order != null
+                                    && order.orderId() != null
+                                    && order.attemptId() != null
+                                    && !order.attemptId().isBlank())
+            .selectKey((key, order) -> order.orderId() + ":" + order.attemptId());
 }
 ```
 
 **Key Features:**
-- **Time Window:** 10-second window for message correlation
-- **Exactly-Once:** Guarantees no duplicate processing
-- **Stateful Join:** Maintains state for partial responses
+- **Correlation by Attempt:** `orderId:attemptId` ensures safe correlation without mixing retry attempts
+- **Time Window:** 30-second window with 30-second grace period (`JoinWindows.ofTimeDifferenceAndGrace`)
+- **Exactly-Once:** `EXACTLY_ONCE_V2` guarantees no duplicate processing
+- **Stateful Join:** Maintains rocksdb state store for partial responses
 
 > 📖 **Detailed Explanation:** For in-depth understanding of exactly-once semantics and window behavior, see [Saga Confusion Points Clarified](./06-Saga-Confusion-Points-Clarified.md)
 
@@ -217,17 +237,17 @@ sequenceDiagram
     Kafka->>SagaCoordinator: Payment result (ACCEPT/REJECT)
     Kafka->>SagaCoordinator: Inventory result (ACCEPT/REJECT)
     
-    SagaCoordinator->>SagaCoordinator: Join streams within 10s window
+    SagaCoordinator->>SagaCoordinator: Correlate by orderId:attemptId<br/>Join streams within 30s window + 30s grace
     SagaCoordinator->>SagaCoordinator: Apply business decision matrix
     
     alt Both Services Accept
-        SagaCoordinator->>Database: UPDATE order SET status='CONFIRMED'
+        SagaCoordinator->>Database: UPDATE orders SET status='CONFIRMED', source=null
         SagaCoordinator->>Kafka: Publish CONFIRMED to 'orders'
     else Both Services Reject
-        SagaCoordinator->>Database: UPDATE order SET status='REJECTED'
+        SagaCoordinator->>Database: UPDATE orders SET status='REJECTED', source=?
         SagaCoordinator->>Kafka: Publish REJECTED to 'orders'
     else Mixed Results (Compensation Required)
-        SagaCoordinator->>Database: UPDATE order SET status='ROLLBACK'
+        SagaCoordinator->>Database: UPDATE orders SET status='ROLLBACK', source=?
         SagaCoordinator->>Kafka: Publish ROLLBACK to 'orders'
         
         Note over PaymentService, InventoryService: Compensation Phase
@@ -241,36 +261,51 @@ sequenceDiagram
 ## 🛡️ Failure Scenarios & Recovery
 
 ### 1. Timeout Handling
-**File:** `OrderService.java` (Lines 180-195)
+**File:** `OrderService.java`
 ```java
 @Job(name = "reProcessNewOrders", retries = 2)
+@Transactional
 public void retryNewOrders() {
     // Find orders stuck in NEW status for > 5 minutes
-    List<Order> stuckOrders = orderRepository
-        .findByStatusAndCreatedDateLessThanOrderByIdAsc(
-            OrderStatus.NEW, 
-            LocalDateTime.now().minusMinutes(5));
+    List<Order> byStatusOrderByIdAsc =
+            orderRepository.findByStatusAndLastModifiedDateLessThanOrderByIdAsc(
+                    OrderStatus.NEW, LocalDateTime.now().minusMinutes(5));
     
-    // Retry by republishing events
-    stuckOrders.forEach(order -> {
-        OrderDto orderDto = this.orderMapper.toDto(order);
-        log.info("Retrying stuck order: {}", orderDto.orderId());
-        kafkaOrderProducer.sendOrder(orderDto);
-    });
+    // Retry by republishing events with fresh attempt IDs
+    byStatusOrderByIdAsc.forEach(
+            order -> {
+                try {
+                    OrderDto persistedOrderDto =
+                            this.orderMapper
+                                    .toDto(order)
+                                    .withAttemptId(UUID.randomUUID().toString());
+                    log.info("Retrying Order :{}", persistedOrderDto);
+                    eventPublisher.publishEvent(persistedOrderDto);
+
+                    order.setLastModifiedDate(LocalDateTime.now());
+                    orderRepository.save(order);
+                } catch (Exception e) {
+                    log.error("Failed to retry publishing order :{}", order.getId(), e);
+                }
+            });
 }
 ```
 
-**Trigger:** JobRunr scheduled job every 5 minutes
+**Trigger:** JobRunr recurrent minutely schedule (`BackgroundJob.scheduleRecurrently("retry-new-orders", Cron.minutely(), ...)` in `Initializer.java`).
 
 ### 2. Partial Response Handling
 **Test Case:** `DistributedTransactionFailureIT.java`
 ```java
 @Test
-void whenPartialResponsesReceived_ShouldHandleIncompleteState() {
-    // Send only payment response, missing inventory
+void whenPartialResponsesReceivedShouldHandleIncompleteState() throws Exception {
     OrderDto paymentOrderDto = TestData.getPaymentOrderDto("ACCEPT", testOrder);
-    kafkaTemplate.send("payment-orders", testOrder.getId(), paymentOrderDto);
-    
+    kafkaTemplate
+            .send(
+                    "payment-orders",
+                    String.valueOf(testOrder.getId()),
+                    toJsonBytes(paymentOrderDto))
+            .get();
+
     // Verify order stays in NEW state (no join occurred)
     await().atMost(10, TimeUnit.SECONDS)
         .untilAsserted(() -> {
@@ -283,13 +318,11 @@ void whenPartialResponsesReceived_ShouldHandleIncompleteState() {
 ### 3. Out-of-Order Message Handling
 **Configuration:** `KafkaStreamsConfig.java`
 ```java
-// Grace period for late-arriving messages
-JoinWindows.ofTimeDifferenceWithNoGrace(Duration.ofSeconds(10))
+// Window and grace period for late-arriving messages
+JoinWindows.ofTimeDifferenceAndGrace(Duration.ofSeconds(30), Duration.ofSeconds(30))
 
-// State store for buffering
-Materialized.<Long, OrderDto>as(store)
-    .withKeySerde(Serdes.Long())
-    .withValueSerde(orderSerde)
+// Serde and attempt correlation
+StreamJoined.with(Serdes.String(), orderSerde, orderSerde)
 ```
 
 ## 🚨 Current Implementation Issues
@@ -302,9 +335,9 @@ Materialized.<Long, OrderDto>as(store)
    - **Impact:** Services must infer compensation from status changes
 
 2. **Fixed Time Window**
-   - **Issue:** 10-second window may be insufficient for slow services
-   - **Location:** `KafkaStreamsConfig.java:90`
-   - **Impact:** Late responses cause transaction failures
+   - **Issue:** 30-second window may need tuning for extremely high latency scenarios
+   - **Location:** `KafkaStreamsConfig.java`
+   - **Impact:** Late responses arriving after window and grace period cause transaction failures
 
 3. **No Saga State Persistence**
    - **Issue:** Saga state only exists in Kafka Streams memory

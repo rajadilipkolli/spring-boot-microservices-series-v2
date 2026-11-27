@@ -14,6 +14,7 @@ import com.example.catalogservice.repositories.OutboxEventRepository;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.concurrent.atomic.AtomicBoolean;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.Logger;
@@ -75,11 +76,8 @@ public class OutboxPublisher {
             try {
                 this.publishEvents()
                         .doOnNext(event -> log.debug("Published outbox event: {}", event.getId()))
-                        .doOnError(
-                                ex ->
-                                        log.error(
-                                                "Error occurred while publishing outbox events",
-                                                ex))
+                        .doOnError(ex ->
+                                log.error("Error occurred while publishing outbox events", ex))
                         .onErrorComplete()
                         .blockLast();
             } finally {
@@ -110,14 +108,13 @@ public class OutboxPublisher {
         log.info("Sending outbox event to Kafka: {}", event.getId());
         return catalogKafkaProducer
                 .send(event.getAggregateId(), event.getPayload().content())
-                .flatMap(
-                        success -> {
-                            if (success) {
-                                return handleSuccess(event);
-                            } else {
-                                return handleFailure(event, "Kafka send returned false");
-                            }
-                        })
+                .flatMap(success -> {
+                    if (success) {
+                        return handleSuccess(event);
+                    } else {
+                        return handleFailure(event, "Kafka send returned false");
+                    }
+                })
                 .onErrorResume(ex -> handleFailure(event, ex.getMessage()));
     }
 
@@ -128,13 +125,14 @@ public class OutboxPublisher {
      *     persistence errors propagate to the caller
      */
     private Mono<OutboxEvent> handleSuccess(OutboxEvent event) {
-        event.setStatus(OutboxEventStatus.PUBLISHED).setProcessedAt(OffsetDateTime.now());
+        event.setStatus(OutboxEventStatus.PUBLISHED)
+                .setProcessedAt(OffsetDateTime.now(ZoneOffset.UTC));
         return outboxEventRepository
                 .save(event)
-                .doOnSuccess(saved -> publishedEventCounter.increment())
+                .doOnSuccess(_ -> publishedEventCounter.increment())
                 .onErrorResume(
                         OptimisticLockingFailureException.class,
-                        ex -> {
+                        _ -> {
                             log.warn(
                                     "Optimistic locking conflict on OutboxEvent {}: skipping",
                                     event.getId());
@@ -144,7 +142,8 @@ public class OutboxPublisher {
 
     /**
      * Records a publishing failure and saves the event. Below the configured retry limit, marks it
-     * pending and increments its retry count; otherwise marks it failed.
+     * pending and increments its retry count; otherwise marks it failed with the current terminal
+     * processing time.
      *
      * @param error the message stored on the event
      * @return the saved event, or an empty Mono on an optimistic locking conflict; other
@@ -152,13 +151,19 @@ public class OutboxPublisher {
      */
     private Mono<OutboxEvent> handleFailure(OutboxEvent event, String error) {
         if (event.getRetryCount() < properties.outbox().getMaxRetries()) {
-            log.warn("Retrying event {}: {}", event.getId(), error);
+            log.warn(
+                    "Retrying event {} (attempt {}): {}",
+                    event.getId(),
+                    event.getRetryCount() + 1,
+                    error);
             event.setStatus(OutboxEventStatus.PENDING)
                     .setRetryCount(event.getRetryCount() + 1)
                     .setErrorMessage(error);
         } else {
             log.error("Event {} failed after max retries: {}", event.getId(), error);
-            event.setStatus(OutboxEventStatus.FAILED).setErrorMessage(error);
+            event.setStatus(OutboxEventStatus.FAILED)
+                    .setProcessedAt(OffsetDateTime.now(ZoneOffset.UTC))
+                    .setErrorMessage(error);
             return outboxEventRepository
                     .save(event)
                     .doOnSuccess(saved -> failedEventCounter.increment())
@@ -181,28 +186,5 @@ public class OutboxPublisher {
                                     event.getId());
                             return Mono.empty();
                         });
-    }
-
-    /**
-     * Reclaims processing events locked longer than the configured lock timeout and waits for
-     * completion. Increments retry counts, marking events failed when the new count reaches the
-     * retry limit and pending otherwise. Errors emitted by the publisher are suppressed.
-     */
-    @Scheduled(cron = "${application.outbox.reaper-cron:0 */1 * * * *}")
-    @SchedulerLock(name = "scheduledReapLock")
-    public void scheduledReap() {
-        log.debug("Running outbox reaper");
-        OffsetDateTime threshold = OffsetDateTime.now().minus(properties.outbox().getLockTimeout());
-        outboxEventRepository
-                .reapOrphanedEvents(threshold, properties.outbox().getMaxRetries())
-                .doOnNext(
-                        count -> {
-                            if (count > 0) {
-                                log.info("Reaped {} orphaned outbox events", count);
-                            }
-                        })
-                .doOnError(ex -> log.error("Error occurred while reaping outbox events", ex))
-                .onErrorComplete()
-                .block();
     }
 }

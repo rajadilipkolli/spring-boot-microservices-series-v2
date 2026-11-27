@@ -5,10 +5,7 @@ resources:
 - cluster-issuer.yaml
 - secrets/external-secrets.yaml
 patches:
+- path: backend-traffic-policy.yaml
 - target:
     kind: Deployment
   patch: "- op: replace\n  path: /spec/replicas\n  value: 1"
-- target:
-    kind: Ingress
-    name: retailstore-ingress
-  path: ingress-patch.yaml

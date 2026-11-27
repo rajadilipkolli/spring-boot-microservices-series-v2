@@ -171,15 +171,6 @@
       ]
     },
     {
-      "type": "com.example.api.gateway.filter.TraceIdFilter",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
       "type": "com.example.api.gateway.web.controller.GatewayInventoryFallback",
       "methods": [
         {
@@ -24464,9 +24455,6 @@
     },
     {
       "glob": "com/example/api/gateway/config/WebFluxConfig.class"
-    },
-    {
-      "glob": "com/example/api/gateway/filter/TraceIdFilter.class"
     },
     {
       "glob": "com/example/api/gateway/web"

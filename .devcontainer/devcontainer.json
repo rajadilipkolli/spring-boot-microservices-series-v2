@@ -19,7 +19,7 @@
 		"ghcr.io/devcontainers/features/kubectl-helm-minikube:1": {
 			"version": "latest"
 		},
-		"ghcr.io/devcontainers-contrib/features/kind:1": {
+		"ghcr.io/devcontainers-extra/features/kind:1": {
 			"version": "latest"
 		}
 	},

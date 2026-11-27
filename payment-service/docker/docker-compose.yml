@@ -3,7 +3,7 @@ services:
 
   postgresql:
     container_name: postgresql
-    image: postgres:18-alpine
+    image: postgres:19-alpine
     environment:
       - POSTGRES_USER=appuser
       - POSTGRES_PASSWORD=secret
@@ -42,7 +42,7 @@ services:
       - payment-network
 
   grafana-lgtm:
-    image: grafana/otel-lgtm:0.37.0
+    image: grafana/otel-lgtm:0.41.2
     extra_hosts: ['host.docker.internal:host-gateway']
     container_name: grafana-lgtm
     environment:
@@ -58,7 +58,7 @@ services:
       - payment-network
 
   otel-collector:
-    image: otel/opentelemetry-collector-contrib:0.163.2
+    image: otel/opentelemetry-collector-contrib:0.166.0
     container_name: otel-collector
     command: [ "--config=/etc/otel-collector-config.yml" ]
     volumes:

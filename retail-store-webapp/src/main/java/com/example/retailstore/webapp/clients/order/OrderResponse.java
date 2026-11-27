@@ -1,10 +1,12 @@
 package com.example.retailstore.webapp.clients.order;
 
 import com.example.retailstore.webapp.clients.customer.CustomerResponse;
+import com.example.retailstore.webapp.config.LenientInstantDeserializer;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
+import tools.jackson.databind.annotation.JsonDeserialize;
 
 public class OrderResponse {
     @JsonFormat(shape = JsonFormat.Shape.STRING)
@@ -16,7 +18,9 @@ public class OrderResponse {
     private String status;
     private String source;
     private Address deliveryAddress;
-    private LocalDateTime createdDate;
+
+    @JsonDeserialize(using = LenientInstantDeserializer.class)
+    private Instant createdDate;
 
     @JsonFormat(shape = JsonFormat.Shape.NUMBER_FLOAT, pattern = "0.00")
     private BigDecimal totalPrice;
@@ -34,7 +38,7 @@ public class OrderResponse {
             String status,
             String source,
             Address deliveryAddress,
-            LocalDateTime createdDate,
+            Instant createdDate,
             BigDecimal totalPrice,
             List<OrderItemResponse> items) {
         this.orderId = orderId;
@@ -68,7 +72,7 @@ public class OrderResponse {
         return deliveryAddress;
     }
 
-    public LocalDateTime getCreatedDate() {
+    public Instant getCreatedDate() {
         return createdDate;
     }
 
@@ -105,7 +109,7 @@ public class OrderResponse {
         this.deliveryAddress = deliveryAddress;
     }
 
-    public void setCreatedDate(LocalDateTime createdDate) {
+    public void setCreatedDate(Instant createdDate) {
         this.createdDate = createdDate;
     }
 

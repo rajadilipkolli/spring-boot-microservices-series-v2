@@ -32,7 +32,10 @@ spec:
   - from:
     - namespaceSelector:
         matchLabels:
-          kubernetes.io/metadata.name: ingress-nginx
+          kubernetes.io/metadata.name: envoy-gateway-system
+    - podSelector:
+        matchLabels:
+          gateway.envoyproxy.io/owning-gateway-name: retailstore-gateway
   podSelector:
     matchExpressions:
     - key: app
@@ -41,6 +44,51 @@ spec:
       - api-gateway
       - retail-store-webapp
       - keycloak
+  policyTypes:
+  - Ingress
+---
+# Supports Envoy Gateway internal-jobrunr-route: admits Envoy ingress to JobRunr dashboard on TCP 28282
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-envoy-to-jobrunr
+  namespace: retailstore
+spec:
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: envoy-gateway-system
+    - podSelector:
+        matchLabels:
+          gateway.envoyproxy.io/owning-gateway-name: retailstore-gateway
+    ports:
+    - protocol: TCP
+      port: 28282
+  podSelector:
+    matchLabels:
+      app: order-service
+  policyTypes:
+  - Ingress
+---
+# Supports retail-store-webapp API calls: admits retail-store-webapp to api-gateway on TCP 8765 only
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-webapp-to-api-gateway
+  namespace: retailstore
+spec:
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: retail-store-webapp
+    ports:
+    - protocol: TCP
+      port: 8765
+  podSelector:
+    matchLabels:
+      app: api-gateway
   policyTypes:
   - Ingress
 ---

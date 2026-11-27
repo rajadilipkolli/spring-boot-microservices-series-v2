@@ -14,11 +14,13 @@ import com.example.inventoryservice.inventory.shared.NonSQLContainersConfig;
 import com.example.inventoryservice.inventory.shared.SQLContainersConfig;
 import com.example.inventoryservice.inventory.shared.TestStockOrderListenerConfig;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.kafka.autoconfigure.KafkaConnectionDetails;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.PlatformTransactionManager;
 import tools.jackson.databind.json.JsonMapper;
 
 @ActiveProfiles({PROFILE_TEST})
@@ -42,7 +44,12 @@ public abstract class AbstractIntegrationTest {
 
     @Autowired protected InventoryRepository inventoryRepository;
 
+    @Autowired protected ProcessedOrderEventRepository processedOrderEventRepository;
+
     @Autowired protected TestStockOrderListenerConfig stockOrderListener;
 
+    @Autowired protected KafkaConnectionDetails kafkaConnectionDetails;
+
     @Autowired protected InventoryOrderManageService inventoryOrderManageService;
+    @Autowired protected PlatformTransactionManager transactionManager;
 }

@@ -48,19 +48,13 @@ public class CircuitBreakerConfig {
                 entryReplacedEvent
                         .getOldEntry()
                         .getEventPublisher()
-                        .onEvent(
-                                event ->
-                                        log.info(
-                                                "CircuitBreaker EntryReplacedEvent Old Entry :{}",
-                                                event));
+                        .onEvent(event ->
+                                log.info("CircuitBreaker EntryReplacedEvent Old Entry :{}", event));
                 entryReplacedEvent
                         .getNewEntry()
                         .getEventPublisher()
-                        .onEvent(
-                                event ->
-                                        log.info(
-                                                "CircuitBreaker EntryReplacedEvent New Entry :{}",
-                                                event));
+                        .onEvent(event ->
+                                log.info("CircuitBreaker EntryReplacedEvent New Entry :{}", event));
             }
         };
     }

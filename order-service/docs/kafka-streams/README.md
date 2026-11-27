@@ -51,10 +51,10 @@ This comprehensive guide covers everything about Kafka Streams implementation in
 ## 🎯 Quick Reference
 
 ### Key Implementation Files
-- `KafkaStreamsConfig.java` - Stream topology and configuration
-- `OrderKafkaStreamService.java` - Materialized view queries
-- `KafkaOrderProducer.java` - Event publishing
-- `OrderManageService.java` - Business logic processing
+- `KafkaStreamsConfig.java` - Stream topology, attempt correlation, and Dead Letter Queue recoverer
+- `EventExternalizationConfig.java` - Spring Modulith outbox event routing to Kafka
+- `OrderManageService.java` - Business logic resolution and metric counters
+- `KafkaConfig.java` - Topic provisioning
 
 ### Critical Configuration
 ```yaml

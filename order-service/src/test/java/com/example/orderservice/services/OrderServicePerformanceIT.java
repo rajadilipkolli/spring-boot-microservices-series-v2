@@ -95,16 +95,14 @@ class OrderServicePerformanceIT extends AbstractIntegrationTest {
         int productCount = 50;
         List<OrderItemRequest> items =
                 IntStream.range(0, productCount)
-                        .mapToObj(
-                                i ->
-                                        new OrderItemRequest(
-                                                "PERF-PROD-" + i,
-                                                i + 1, // quantity increases with product number
-                                                BigDecimal.valueOf(
-                                                        5.0 + (i * 0.5)) // price increases
-                                                // with product
-                                                // number
-                                                ))
+                        .mapToObj(i ->
+                                new OrderItemRequest(
+                                        "PERF-PROD-" + i,
+                                        i + 1, // quantity increases with product number
+                                        BigDecimal.valueOf(5.0 + (i * 0.5)) // price increases
+                                        // with product
+                                        // number
+                                        ))
                         .toList();
 
         OrderRequest request =
@@ -152,30 +150,28 @@ class OrderServicePerformanceIT extends AbstractIntegrationTest {
             int expectedQuantity = i + 1;
             BigDecimal expectedPrice = BigDecimal.valueOf(5.0 + (i * 0.5));
             assertThat(response.items())
-                    .anyMatch(
-                            item ->
-                                    item.productId().equals(productCode)
-                                            && item.quantity() == expectedQuantity
-                                            && item.productPrice().compareTo(expectedPrice) == 0);
+                    .anyMatch(item ->
+                            item.productId().equals(productCode)
+                                    && item.quantity() == expectedQuantity
+                                    && item.productPrice().compareTo(expectedPrice) == 0);
         }
     }
 
     private List<OrderRequest> generateLargeOrderBatch(int count) {
         return IntStream.range(0, count)
-                .mapToObj(
-                        i ->
-                                new OrderRequest(
-                                        1L,
-                                        List.of(
-                                                new OrderItemRequest(
-                                                        "PERF-PROD", 1, BigDecimal.valueOf(9.99))),
-                                        new Address(
-                                                "Performance Test Address",
-                                                "Line 2",
-                                                "Test City",
-                                                "Test State",
-                                                "12345",
-                                                "Test Country")))
+                .mapToObj(i ->
+                        new OrderRequest(
+                                1L,
+                                List.of(
+                                        new OrderItemRequest(
+                                                "PERF-PROD", 1, BigDecimal.valueOf(9.99))),
+                                new Address(
+                                        "Performance Test Address",
+                                        "Line 2",
+                                        "Test City",
+                                        "Test State",
+                                        "12345",
+                                        "Test Country")))
                 .toList();
     }
 

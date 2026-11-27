@@ -33,9 +33,13 @@ class ResilienceE2ETest {
                         .extract()
                         .response();
 
-        // Gateway fallback returns 200 with fallback message or status
-        assertThat(response.statusCode()).isEqualTo(200);
-        assertThat(response.asString()).isEqualTo("Hello TEST_PRODUCT");
+        // Gateway fallback returns 503 SERVICE_UNAVAILABLE ProblemDetail
+        assertThat(response.statusCode()).isEqualTo(503);
+        assertThat(response.jsonPath().getString("title"))
+                .isEqualTo("Inventory Service Unavailable");
+        assertThat(response.jsonPath().getString("detail"))
+                .isEqualTo("Inventory service is currently unavailable for product TEST_PRODUCT");
+        assertThat(response.jsonPath().getString("productId")).isEqualTo("TEST_PRODUCT");
     }
 
     @Test
@@ -50,7 +54,7 @@ class ResilienceE2ETest {
                         "https://example.com/item.png",
                         new BigDecimal("19.99"));
 
-        given().spec(E2EConfig.defaultRequestSpec())
+        given().spec(E2EConfig.authenticatedRequestSpec())
                 .body(product)
                 .when()
                 .post("/catalog-service/api/catalog")
@@ -59,7 +63,7 @@ class ResilienceE2ETest {
 
         // Querying an existing product with ?delay=4 triggers delay logic in controller
         Response response =
-                given().spec(E2EConfig.defaultRequestSpec())
+                given().spec(E2EConfig.authenticatedRequestSpec())
                         .queryParam("delay", 4)
                         .when()
                         .get("/catalog-service/api/catalog/product-code/" + productCode)

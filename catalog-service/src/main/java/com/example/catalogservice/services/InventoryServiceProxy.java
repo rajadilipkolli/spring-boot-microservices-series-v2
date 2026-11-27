@@ -8,11 +8,11 @@ package com.example.catalogservice.services;
 
 import static org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE;
 
-import com.example.catalogservice.config.logging.Loggable;
 import com.example.catalogservice.exception.CustomResponseStatusException;
 import com.example.catalogservice.model.response.InventoryResponse;
-import com.example.catalogservice.model.response.PagedResult;
-import com.example.catalogservice.utils.LogSanitizer;
+import com.example.common.dto.PagedResult;
+import com.example.common.logging.LogSanitizer;
+import com.example.common.logging.Loggable;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
@@ -48,6 +48,7 @@ public class InventoryServiceProxy {
 
     private final WebClient webClient;
     private final CircuitBreaker circuitBreaker;
+    private final CircuitBreaker batchCircuitBreaker;
     private final Retry retry;
     private final RateLimiter rateLimiter;
     private final TimeLimiter timeLimiter;
@@ -60,6 +61,8 @@ public class InventoryServiceProxy {
             TimeLimiterRegistry timeLimiterRegistry) {
         this.webClient = webClient;
         this.circuitBreaker = circuitBreakerRegistry.circuitBreaker(DEFAULT);
+        this.batchCircuitBreaker =
+                circuitBreakerRegistry.circuitBreaker("getInventoryByProductCodes");
         this.retry = retryRegistry.retry("product-api");
         this.rateLimiter = rateLimiterRegistry.rateLimiter(DEFAULT);
         this.timeLimiter = timeLimiterRegistry.timeLimiter(DEFAULT);
@@ -86,37 +89,46 @@ public class InventoryServiceProxy {
         return Mono.just(new InventoryResponse(code, 0));
     }
 
-    @io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker(
-            name = "getInventoryByProductCodes",
-            fallbackMethod = "getInventoryByProductCodesFallBack")
+    /**
+     * Fetches inventory for the supplied codes across all response pages. Fetch and circuit breaker
+     * errors complete the stream without further values; entries already emitted from earlier pages
+     * are retained.
+     *
+     * @param productCodeList the product codes to query
+     * @return inventory entries, or an empty stream if the request fails before emitting any
+     */
     public Flux<InventoryResponse> getInventoryByProductCodes(List<String> productCodeList) {
         log.info(
                 "Fetching inventory information for productCodes : {}",
                 LogSanitizer.sanitizeCollection(productCodeList));
         return fetchInventoryPage(productCodeList, 0)
-                .expand(
-                        page -> {
-                            if (page.hasNext()) {
-                                return fetchInventoryPage(productCodeList, page.pageNumber() + 1);
-                            }
-                            return Mono.empty();
-                        })
-                .flatMapIterable(PagedResult::data);
+                .expand(page -> {
+                    if (page.hasNext()) {
+                        return fetchInventoryPage(productCodeList, page.pageNumber() + 1);
+                    }
+                    return Mono.empty();
+                })
+                .flatMapIterable(PagedResult::data)
+                .transformDeferred(CircuitBreakerOperator.of(batchCircuitBreaker))
+                .onErrorResume(throwable ->
+                        getInventoryByProductCodesFallBack(
+                                throwable instanceof Exception ex
+                                        ? ex
+                                        : new RuntimeException(throwable)));
     }
 
     private Mono<PagedResult<InventoryResponse>> fetchInventoryPage(
             List<String> productCodeList, int pageNo) {
         return webClient
                 .get()
-                .uri(
-                        uriBuilder -> {
-                            uriBuilder.path("/api/inventory/product");
-                            uriBuilder.queryParam("codes", productCodeList);
-                            if (pageNo > 0) {
-                                uriBuilder.queryParam("pageNo", pageNo);
-                            }
-                            return uriBuilder.build();
-                        })
+                .uri(uriBuilder -> {
+                    uriBuilder.path("/api/inventory/product");
+                    uriBuilder.queryParam("codes", productCodeList);
+                    if (pageNo > 0) {
+                        uriBuilder.queryParam("pageNo", pageNo);
+                    }
+                    return uriBuilder.build();
+                })
                 .retrieve()
                 .bodyToMono(new ParameterizedTypeReference<PagedResult<InventoryResponse>>() {});
     }
@@ -126,6 +138,10 @@ public class InventoryServiceProxy {
         return Flux.empty();
     }
 
+    /**
+     * Applies resilience controls to a request. Timeouts and rate-limit rejections use the supplied
+     * fallback; an open circuit emits a service-unavailable error. Other errors propagate.
+     */
     private <T> Mono<T> executeWithFallback(
             Mono<T> publisher, Function<Throwable, Mono<T>> fallback) {
         return publisher
@@ -137,12 +153,13 @@ public class InventoryServiceProxy {
                 .onErrorResume(RequestNotPermitted.class, fallback)
                 .onErrorResume(
                         CallNotPermittedException.class,
-                        throwable -> {
+                        _ -> {
                             log.error(
                                     "Circuit Breaker is in [{}]... Providing fallback response without calling the API",
                                     circuitBreaker.getState());
-                            throw new CustomResponseStatusException(
-                                    SERVICE_UNAVAILABLE, "API service is unavailable");
+                            return Mono.error(
+                                    new CustomResponseStatusException(
+                                            SERVICE_UNAVAILABLE, "API service is unavailable"));
                         });
     }
 }

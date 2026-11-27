@@ -8,10 +8,11 @@ package com.example.catalogservice.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.example.catalogservice.model.payload.ProductDto;
+import com.example.common.dto.ProductDto;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import org.assertj.core.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -39,7 +40,7 @@ public class TestKafkaListenerConfig {
             ProductDto parsed = jsonMapper.readValue(productDto, ProductDto.class);
             assertThat(parsed).isNotNull();
         } catch (Exception e) {
-            org.assertj.core.api.Assertions.fail("Failed to parse ProductDto from string", e);
+            Assertions.fail("Failed to parse ProductDto from string", e);
         }
         messages.offer(productDto);
     }

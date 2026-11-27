@@ -6,11 +6,10 @@
 
 package com.example.inventoryservice.inventory.web.service;
 
+import com.example.common.dto.PagedResult;
 import com.example.inventoryservice.inventory.InventoryAPI;
-import com.example.inventoryservice.inventory.ProductManageService;
 import com.example.inventoryservice.inventory.domain.models.InventoryRequest;
 import com.example.inventoryservice.inventory.domain.models.InventoryResponse;
-import com.example.inventoryservice.inventory.domain.models.PagedResult;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.stereotype.Service;
@@ -21,19 +20,16 @@ import org.springframework.transaction.annotation.Transactional;
 class InventoryAPIImpl implements InventoryAPI {
     private final InventoryService inventoryService;
     private final InventoryMapper inventoryMapper;
-    private final InventoryOrderManageServiceImpl orderManageService;
-    private final ProductManageService productManageService;
+    private final InventoryGeneratorService inventoryGeneratorService;
 
-    /** Creates the facade with inventory persistence, response mapping, and event handlers. */
+    /** Creates the facade with inventory persistence, response mapping, and generator service. */
     InventoryAPIImpl(
             InventoryService inventoryService,
             InventoryMapper inventoryMapper,
-            InventoryOrderManageServiceImpl orderManageService,
-            ProductManageService productManageService) {
+            InventoryGeneratorService inventoryGeneratorService) {
         this.inventoryService = inventoryService;
         this.inventoryMapper = inventoryMapper;
-        this.orderManageService = orderManageService;
-        this.productManageService = productManageService;
+        this.inventoryGeneratorService = inventoryGeneratorService;
     }
 
     /** Delegates the sorted inventory page lookup to the inventory service. */
@@ -43,18 +39,16 @@ class InventoryAPIImpl implements InventoryAPI {
         return inventoryService.findAllInventories(pageNo, pageSize, sortBy, sortDir);
     }
 
-    /** Maps inventory found by identifier to a response, preserving an absent result. */
+    /** Returns whether active inventory exists for the ID; persistence failures propagate. */
     @Override
-    public Optional<InventoryResponse> findInventoryById(Long id) {
-        return inventoryService.findInventoryById(id).map(inventoryMapper::toResponse);
+    public boolean existsInventoryById(Long id) {
+        return inventoryService.existsByIdAndDeletedFalse(id);
     }
 
-    /** Maps inventory found by product code to a response, preserving an absent result. */
+    /** Returns active inventory by product code, or empty if absent or deleted. */
     @Override
     public Optional<InventoryResponse> findInventoryByProductCode(String productCode) {
-        return inventoryService
-                .findInventoryByProductCode(productCode)
-                .map(inventoryMapper::toResponse);
+        return inventoryService.findInventoryByProductCode(productCode);
     }
 
     /** Delegates the paged lookup restricted to the supplied product codes. */
@@ -65,67 +59,35 @@ class InventoryAPIImpl implements InventoryAPI {
                 codes, pageNo, pageSize, sortBy, sortDir);
     }
 
-    /** Creates inventory in a write transaction and maps the saved entity to a response. */
+    /** Creates inventory and maps the saved entity to a response. */
     @Override
-    @Transactional
     public InventoryResponse saveInventory(InventoryRequest inventoryRequest) {
         return inventoryMapper.toResponse(inventoryService.saveInventory(inventoryRequest));
     }
 
-    /** Updates inventory by identifier in a write transaction, returning empty when absent. */
+    /** Updates inventory by identifier, returning empty when absent. */
     @Override
-    @Transactional
     public Optional<InventoryResponse> updateInventoryById(
             Long id, InventoryRequest inventoryRequest) {
-        return inventoryService
-                .updateInventoryById(id, inventoryRequest)
-                .map(inventoryMapper::toResponse);
+        return inventoryService.updateInventoryById(id, inventoryRequest);
     }
 
-    /** Updates inventory by product code in a write transaction, returning empty when absent. */
+    /** Updates inventory by product code, returning empty when absent. */
     @Override
-    @Transactional
     public Optional<InventoryResponse> updateInventoryByProductCode(
             String productCode, InventoryRequest inventoryRequest) {
-        return inventoryService
-                .updateInventoryByProductCode(productCode, inventoryRequest)
-                .map(inventoryMapper::toResponse);
+        return inventoryService.updateInventoryByProductCode(productCode, inventoryRequest);
     }
 
-    /** Deletes inventory by identifier within a write transaction. */
+    /** Soft deletes inventory by its identifier. */
     @Override
-    @Transactional
     public void deleteInventoryById(Long id) {
         inventoryService.deleteInventoryById(id);
     }
 
-    /** Runs the idempotent generated-batch update within a write transaction. */
+    /** Updates inventory for generated batches. */
     @Override
-    @Transactional
     public void updateGeneratedInventory(String idempotencyKey, Integer batchSize) {
-        inventoryService.updateGeneratedInventory(idempotencyKey, batchSize);
-    }
-
-    /**
-     * Reserves order quantities and publishes the outcome through the transactional order service.
-     */
-    @Override
-    @Transactional
-    public void reserve(com.example.inventoryservice.inventory.domain.models.OrderDto orderDto) {
-        orderManageService.reserve(orderDto);
-    }
-
-    /** Applies order confirmation or rollback stock changes within a write transaction. */
-    @Override
-    @Transactional
-    public void confirm(com.example.inventoryservice.inventory.domain.models.OrderDto orderDto) {
-        orderManageService.confirm(orderDto);
-    }
-
-    /** Handles product creation within a write transaction, ignoring existing product codes. */
-    @Override
-    @Transactional
-    public void manage(com.example.inventoryservice.inventory.domain.models.ProductDto productDto) {
-        productManageService.manage(productDto);
+        inventoryGeneratorService.updateGeneratedInventory(idempotencyKey, batchSize);
     }
 }

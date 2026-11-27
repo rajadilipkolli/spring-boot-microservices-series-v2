@@ -1,7 +1,7 @@
 services:
 
   postgresql:
-    image: postgres:18-alpine
+    image: postgres:19-alpine
     container_name: postgresql
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     environment:
@@ -19,7 +19,7 @@ services:
       - order-network
 
   grafana-lgtm:
-    image: grafana/otel-lgtm:0.37.0
+    image: grafana/otel-lgtm:0.41.2
     extra_hosts: ['host.docker.internal:host-gateway']
     container_name: grafana-lgtm
     environment:
@@ -67,7 +67,7 @@ services:
   config-server:
     container_name: config-server
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
-    image: dockertmt/mmv2-config-server-25:0.0.1-SNAPSHOT
+    image: dockertmt/mmv2-config-server:0.0.1-SNAPSHOT
     deploy:
       resources:
         limits:

@@ -2,6 +2,7 @@ package com.example.retailstore.webapp.web.controller;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 
 import com.example.retailstore.webapp.clients.customer.CustomerRequest;
 import com.example.retailstore.webapp.clients.customer.CustomerResponse;
@@ -98,6 +99,7 @@ class RegistrationControllerIT extends AbstractIntegrationTest {
                 .uri("/api/register")
                 .content(jsonMapper.writeValueAsString(registrationRequest))
                 .contentType(MediaType.APPLICATION_JSON)
+                .with(csrf())
                 .assertThat()
                 .hasStatus(HttpStatus.OK)
                 .bodyJson()
@@ -157,6 +159,7 @@ class RegistrationControllerIT extends AbstractIntegrationTest {
                 .uri("/api/register")
                 .content(jsonMapper.writeValueAsString(request))
                 .contentType(MediaType.APPLICATION_JSON)
+                .with(csrf())
                 .assertThat()
                 .hasStatus(HttpStatus.BAD_REQUEST)
                 .hasContentType(MediaType.APPLICATION_PROBLEM_JSON)
@@ -188,6 +191,7 @@ class RegistrationControllerIT extends AbstractIntegrationTest {
                 .uri("/api/register")
                 .content(jsonMapper.writeValueAsString(request))
                 .contentType(MediaType.APPLICATION_JSON)
+                .with(csrf())
                 .assertThat()
                 .hasStatus(HttpStatus.BAD_REQUEST)
                 .hasContentType(MediaType.APPLICATION_PROBLEM_JSON)
@@ -219,6 +223,7 @@ class RegistrationControllerIT extends AbstractIntegrationTest {
                 .uri("/api/register")
                 .content(jsonMapper.writeValueAsString(request))
                 .contentType(MediaType.APPLICATION_JSON)
+                .with(csrf())
                 .assertThat()
                 .hasStatus(HttpStatus.BAD_REQUEST)
                 .hasContentType(MediaType.APPLICATION_PROBLEM_JSON)
@@ -282,6 +287,7 @@ class RegistrationControllerIT extends AbstractIntegrationTest {
                 .uri("/api/register")
                 .content(jsonMapper.writeValueAsString(registrationRequest))
                 .contentType(MediaType.APPLICATION_JSON)
+                .with(csrf())
                 .assertThat()
                 .hasStatus(HttpStatus.OK);
 
@@ -291,6 +297,7 @@ class RegistrationControllerIT extends AbstractIntegrationTest {
                 .uri("/api/register")
                 .content(jsonMapper.writeValueAsString(registrationRequest))
                 .contentType(MediaType.APPLICATION_JSON)
+                .with(csrf())
                 .assertThat()
                 .hasStatus(HttpStatus.CONFLICT)
                 .hasContentType(MediaType.APPLICATION_PROBLEM_JSON)

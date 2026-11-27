@@ -1,6 +1,21 @@
 # Script to start the backend microservices (excludes retail-store-webapp)
 # Run this script from the root of the spring-boot-microservices-series-v2 directory
 
+<#
+.SYNOPSIS
+Starts a service and waits for its health endpoint to report UP.
+.DESCRIPTION
+Returns the process after an HTTP 200 response with status UP. Polling errors are retried.
+Exits the script with code 1 if the process exits early or the timeout elapses.
+.PARAMETER Name
+The service name used in status messages.
+.PARAMETER Directory
+The service directory, relative to the current working directory.
+.PARAMETER HealthUrl
+The health endpoint to poll.
+.PARAMETER TimeoutSeconds
+The health check timeout in seconds. Defaults to 90.
+#>
 function Start-ServiceProcess {
     param(
         [string]$Name,

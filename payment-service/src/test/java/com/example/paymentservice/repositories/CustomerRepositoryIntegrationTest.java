@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.paymentservice.common.AbstractIntegrationTest;
+import com.example.paymentservice.exception.CustomerExistsException;
 import com.example.paymentservice.jooq.tables.records.CustomersRecord;
 import java.math.BigDecimal;
 import java.util.List;
@@ -15,7 +16,6 @@ import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.postgresql.util.PSQLException;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.dao.DuplicateKeyException;
 import org.springframework.dao.OptimisticLockingFailureException;
 
 class CustomerRepositoryIntegrationTest extends AbstractIntegrationTest {
@@ -69,9 +69,8 @@ class CustomerRepositoryIntegrationTest extends AbstractIntegrationTest {
     }
 
     /**
-     * Verifies that inserting a duplicate customer with identical name and email fails with
-     * DataIntegrityViolationException (specifically DuplicateKeyException) and wraps a
-     * PSQLException for the uc_customers_name_email_key constraint.
+     * Verifies that inserting a duplicate customer with identical name and email translates to
+     * CustomerExistsException wrapping the underlying constraint violation.
      */
     @Test
     void saveCustomerDuplicateNameAndEmailThrowsDataIntegrityViolationException() {
@@ -103,16 +102,16 @@ class CustomerRepositoryIntegrationTest extends AbstractIntegrationTest {
                         .setAmountReserved(BigDecimal.ZERO);
 
         assertThatThrownBy(() -> customerRepository.saveCustomer(customer2))
-                .isInstanceOf(DuplicateKeyException.class)
-                .satisfies(
-                        ex -> {
-                            PSQLException psqlEx = findCause(ex, PSQLException.class);
-                            assertThat((Throwable) psqlEx).isNotNull();
-                            assertThat(psqlEx.getSQLState()).isEqualTo("23505");
-                            assertThat(psqlEx.getServerErrorMessage()).isNotNull();
-                            assertThat(psqlEx.getServerErrorMessage().getConstraint())
-                                    .isEqualTo("uc_customers_name_email_key");
-                        });
+                .isInstanceOf(CustomerExistsException.class)
+                .hasMessage("Customer with email duplicate@example.com already exists.")
+                .satisfies(ex -> {
+                    PSQLException psqlEx = findCause(ex, PSQLException.class);
+                    assertThat((Throwable) psqlEx).isNotNull();
+                    assertThat(psqlEx.getSQLState()).isEqualTo("23505");
+                    assertThat(psqlEx.getServerErrorMessage()).isNotNull();
+                    assertThat(psqlEx.getServerErrorMessage().getConstraint())
+                            .isEqualTo("uc_customers_name_email_key");
+                });
 
         assertThat(customerDAO.findByEmail("duplicate@example.com")).isPresent();
         assertThat(
@@ -143,12 +142,11 @@ class CustomerRepositoryIntegrationTest extends AbstractIntegrationTest {
 
         assertThatThrownBy(() -> customerRepository.saveCustomer(customer))
                 .isInstanceOf(DataIntegrityViolationException.class)
-                .satisfies(
-                        ex -> {
-                            PSQLException psqlEx = findCause(ex, PSQLException.class);
-                            assertThat((Throwable) psqlEx).isNotNull();
-                            assertThat(psqlEx.getSQLState()).isEqualTo("23502");
-                        });
+                .satisfies(ex -> {
+                    PSQLException psqlEx = findCause(ex, PSQLException.class);
+                    assertThat((Throwable) psqlEx).isNotNull();
+                    assertThat(psqlEx.getSQLState()).isEqualTo("23502");
+                });
 
         assertThat(customerDAO.findByEmail("nullname@example.com")).isEmpty();
     }
@@ -312,6 +310,49 @@ class CustomerRepositoryIntegrationTest extends AbstractIntegrationTest {
                 .isInstanceOf(DataIntegrityViolationException.class);
 
         assertThat(customerDAO.findByEmail("duplicate_batch@example.com")).isEmpty();
+    }
+
+    @Test
+    void testSoftDeleteAndActiveQueries() {
+        CustomersRecord customer =
+                new CustomersRecord()
+                        .setName("Active User")
+                        .setEmail("active@example.com")
+                        .setAddressLine1("123 Active St")
+                        .setCity("City")
+                        .setState("ST")
+                        .setZipCode("12345")
+                        .setCountry("Country")
+                        .setPhone("123-456-7890")
+                        .setAmountAvailable(BigDecimal.valueOf(100.0))
+                        .setAmountReserved(BigDecimal.ZERO);
+        CustomersRecord saved = customerRepository.saveCustomer(customer);
+        Long id = saved.getId();
+
+        assertThat(customerRepository.findActiveById(id)).isPresent();
+        assertThat(customerRepository.countActive()).isEqualTo(1L);
+
+        int updated = customerRepository.softDeleteById(id);
+        assertThat(updated).isEqualTo(1);
+
+        // Repeated soft delete should affect 0 rows
+        assertThat(customerRepository.softDeleteById(id)).isZero();
+
+        // Active lookups must return empty
+        assertThat(customerRepository.findActiveById(id)).isEmpty();
+        assertThat(customerRepository.countActive()).isZero();
+        assertThat(customerRepository.findByName("Active User")).isEmpty();
+        assertThat(customerRepository.findByEmail("active@example.com")).isEmpty();
+
+        // Retained unfiltered lookups must still find the customer
+        assertThat(customerRepository.findById(id)).isPresent();
+        assertThat(customerRepository.existsByEmail("active@example.com")).isTrue();
+        assertThat(customerRepository.count()).isEqualTo(1L);
+
+        // Version should have incremented on soft delete
+        CustomersRecord retained = customerRepository.findById(id).orElseThrow();
+        assertThat(retained.getDeleted()).isTrue();
+        assertThat(retained.getVersion()).isEqualTo(saved.getVersion() + 1);
     }
 
     /**

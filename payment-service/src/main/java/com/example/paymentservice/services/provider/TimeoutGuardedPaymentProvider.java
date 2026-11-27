@@ -3,13 +3,14 @@ package com.example.paymentservice.services.provider;
 
 import com.example.paymentservice.config.ApplicationProperties;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Primary;
+import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -18,15 +19,18 @@ public class TimeoutGuardedPaymentProvider implements PaymentProviderPort {
 
     private static final Logger log = LoggerFactory.getLogger(TimeoutGuardedPaymentProvider.class);
 
-    private final InternalLedgerAdapter delegate;
+    private final PaymentProviderPort delegate;
     private final ApplicationProperties properties;
-    private final ExecutorService executorService = Executors.newFixedThreadPool(16);
+    private final Executor executor;
 
     /** Creates a provider wrapper using the ledger adapter and configured provider timeout. */
     public TimeoutGuardedPaymentProvider(
-            InternalLedgerAdapter delegate, ApplicationProperties properties) {
+            @Qualifier("internalLedgerAdapter") PaymentProviderPort delegate,
+            ApplicationProperties properties,
+            @Qualifier("applicationTaskExecutor") AsyncTaskExecutor executor) {
         this.delegate = delegate;
         this.properties = properties;
+        this.executor = executor;
     }
 
     /**
@@ -43,7 +47,7 @@ public class TimeoutGuardedPaymentProvider implements PaymentProviderPort {
         long timeoutMs = properties.getOperation().getProviderTimeout().toMillis();
         try {
             return CompletableFuture.supplyAsync(
-                            () -> delegate.execute(downstreamKey, command), executorService)
+                            () -> delegate.execute(downstreamKey, command), executor)
                     .get(timeoutMs, TimeUnit.MILLISECONDS);
         } catch (TimeoutException e) {
             log.warn("Provider execution timed out for key: {}", downstreamKey);
@@ -71,8 +75,7 @@ public class TimeoutGuardedPaymentProvider implements PaymentProviderPort {
     public ProviderResult lookup(String downstreamKey) {
         long timeoutMs = properties.getOperation().getProviderTimeout().toMillis();
         try {
-            return CompletableFuture.supplyAsync(
-                            () -> delegate.lookup(downstreamKey), executorService)
+            return CompletableFuture.supplyAsync(() -> delegate.lookup(downstreamKey), executor)
                     .get(timeoutMs, TimeUnit.MILLISECONDS);
         } catch (TimeoutException e) {
             log.warn("Provider lookup timed out for key: {}", downstreamKey);

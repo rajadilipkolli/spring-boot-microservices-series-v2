@@ -7,7 +7,7 @@
 4. [Performance Testing](#performance-testing)
 5. [Production Deployment](#production-deployment)
 6. [Scaling Strategies](#scaling-strategies)
-7. [Maintenance & Updates](#maintenance--updates)
+7. [Maintenance & Updates](#maintenance-updates)
 
 ## 🎯 Testing Strategy Overview
 
@@ -120,13 +120,14 @@ class OrderStreamTopologyTest {
         props.put(StreamsConfig.APPLICATION_ID_CONFIG, "test-order-service");
         props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "dummy:1234");
         props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.Long().getClass());
-        props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, JsonSerde.class);
+        props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, JacksonJsonSerde.class);
         
         // Create test driver
         testDriver = new TopologyTestDriver(topology, props);
         
         // Create test topics
-        JsonSerde<OrderDto> orderSerde = new JsonSerde<>(OrderDto.class);
+        JacksonJsonSerde<OrderDto> orderSerde =
+                new JacksonJsonSerde<>(OrderDto.class).noTypeInfo().ignoreTypeHeaders();
         
         paymentTopic = testDriver.createInputTopic(
             "payment-orders",
@@ -411,8 +412,16 @@ public class OrderTestDataBuilder {
 
 ### EmbeddedKafka Integration Tests
 
+Configure the `test` profile in `src/test/resources/application-test.properties` so `kafkaTemplate.send` writes the JSON bytes unchanged. Keep the existing consumer deserializers unchanged.
+
+```properties
+spring.kafka.producer.key-serializer=org.apache.kafka.common.serialization.StringSerializer
+spring.kafka.producer.value-serializer=org.apache.kafka.common.serialization.ByteArraySerializer
+```
+
 ```java
 @SpringBootTest
+@ActiveProfiles("test")
 @EmbeddedKafka(
     partitions = 3,
     topics = {"orders", "payment-orders", "stock-orders", "recovererDLQ"},
@@ -428,13 +437,10 @@ public class OrderTestDataBuilder {
 class OrderServiceIntegrationTest {
     
     @Autowired
-    private KafkaTemplate<Long, OrderDto> kafkaTemplate;
+    private KafkaTemplate<String, byte[]> kafkaTemplate;
     
     @Autowired
     private OrderRepository orderRepository;
-    
-    @Autowired
-    private OrderKafkaStreamService orderKafkaStreamService;
     
     @Test
     void shouldProcessOrderEndToEnd() throws Exception {
@@ -445,8 +451,8 @@ class OrderServiceIntegrationTest {
         OrderDto paymentEvent = OrderTestDataBuilder.createPaymentOrder(orderId, "ACCEPT");
         OrderDto stockEvent = OrderTestDataBuilder.createStockOrder(orderId, "ACCEPT");
         
-        kafkaTemplate.send("payment-orders", orderId, paymentEvent);
-        kafkaTemplate.send("stock-orders", orderId, stockEvent);
+        kafkaTemplate.send("payment-orders", String.valueOf(orderId), toJsonBytes(paymentEvent));
+        kafkaTemplate.send("stock-orders", String.valueOf(orderId), toJsonBytes(stockEvent));
         
         // Then - Wait for processing and verify results
         await().atMost(10, TimeUnit.SECONDS)
@@ -456,11 +462,6 @@ class OrderServiceIntegrationTest {
                 Optional<Order> order = orderRepository.findById(orderId);
                 assertThat(order).isPresent();
                 assertThat(order.get().getStatus()).isEqualTo(OrderStatus.CONFIRMED);
-                
-                // Check materialized view
-                List<OrderDto> orders = orderKafkaStreamService.getAllOrders(0, 10);
-                assertThat(orders).anyMatch(o -> 
-                    o.orderId().equals(orderId) && o.status().equals("CONFIRMED"));
             });
     }
     
@@ -473,8 +474,8 @@ class OrderServiceIntegrationTest {
         OrderDto paymentEvent = OrderTestDataBuilder.createPaymentOrder(orderId, "ACCEPT");
         OrderDto stockEvent = OrderTestDataBuilder.createStockOrder(orderId, "REJECT");
         
-        kafkaTemplate.send("payment-orders", orderId, paymentEvent);
-        kafkaTemplate.send("stock-orders", orderId, stockEvent);
+        kafkaTemplate.send("payment-orders", String.valueOf(orderId), toJsonBytes(paymentEvent));
+        kafkaTemplate.send("stock-orders", String.valueOf(orderId), toJsonBytes(stockEvent));
         
         // Then - Should trigger rollback
         await().atMost(10, TimeUnit.SECONDS)
@@ -500,7 +501,7 @@ class OrderServiceTestContainersIT {
         .withExposedPorts(9093);
     
     @Container
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:15-alpine")
+    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:19-alpine")
         .withDatabaseName("testdb")
         .withUsername("test")
         .withPassword("test");
@@ -528,8 +529,8 @@ class OrderServiceTestContainersIT {
                     OrderDto paymentEvent = OrderTestDataBuilder.createPaymentOrder(orderId, "ACCEPT");
                     OrderDto stockEvent = OrderTestDataBuilder.createStockOrder(orderId, "ACCEPT");
                     
-                    kafkaTemplate.send("payment-orders", orderId, paymentEvent);
-                    kafkaTemplate.send("stock-orders", orderId, stockEvent);
+                    kafkaTemplate.send("payment-orders", String.valueOf(orderId), toJsonBytes(paymentEvent));
+                    kafkaTemplate.send("stock-orders", String.valueOf(orderId), toJsonBytes(stockEvent));
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
@@ -924,7 +925,7 @@ spec:
                 echo "Starting graceful shutdown..."
                 
                 # Stop accepting new requests
-                curl -X POST http://localhost:18282/actuator/shutdown
+                curl -X POST http://localhost:18282/order-service/actuator/shutdown
                 
                 # Wait for in-flight requests to complete
                 sleep 30

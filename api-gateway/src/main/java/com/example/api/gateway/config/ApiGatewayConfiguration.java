@@ -12,38 +12,40 @@ import org.springframework.cloud.gateway.route.builder.RouteLocatorBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+/**
+ * Configuration for custom programmatic routes in Spring Cloud Gateway.
+ *
+ * <p>NOTE: The /get route is maintained for demonstration and contract integration testing
+ * (validated by ApiGatewayConfigurationIntegrationTest). Core microservice business routes are
+ * declared declaratively in application.yml.
+ */
 @Configuration(proxyBeanMethods = false)
 class ApiGatewayConfiguration {
 
+    /**
+     * Routes {@code /get} to the configured upstream, adding the {@code MyHeader: MyURI} request
+     * header, {@code Param=MyValue} query parameter, and {@code X-Response-Header: Transformed}
+     * response header.
+     *
+     * @param builder gateway route builder
+     * @param httpbinUri upstream URI, overridable via {@code app.gateway.httpbin}
+     * @return the demonstration route locator
+     */
     @Bean
     RouteLocator gatewayRouter(
             RouteLocatorBuilder builder,
             @Value("${app.gateway.httpbin:http://httpbin.org:80}") String httpbinUri) {
         return builder.routes()
-                .route(
-                        routeSpec ->
-                                routeSpec
-                                        .path("/get")
-                                        .filters(
-                                                filterSpec ->
-                                                        filterSpec
-                                                                .addRequestHeader(
-                                                                        "MyHeader", "MyURI")
-                                                                .addRequestParameter(
-                                                                        "Param", "MyValue")
-                                                                .addResponseHeader(
-                                                                        "X-Response-Header",
-                                                                        "Transformed"))
-                                        .uri(httpbinUri))
-                .route(
-                        p ->
-                                p.path("/ORDER-SERVICE-new/**")
-                                        .filters(
-                                                f ->
-                                                        f.rewritePath(
-                                                                "/ORDER-SERVICE-new/(?<segment>.*)",
-                                                                "/ORDER-SERVICE-feign/${segment}"))
-                                        .uri("lb://ORDER-SERVICE"))
+                .route(routeSpec ->
+                        routeSpec
+                                .path("/get")
+                                .filters(filterSpec ->
+                                        filterSpec
+                                                .addRequestHeader("MyHeader", "MyURI")
+                                                .addRequestParameter("Param", "MyValue")
+                                                .addResponseHeader(
+                                                        "X-Response-Header", "Transformed"))
+                                .uri(httpbinUri))
                 .build();
     }
 }

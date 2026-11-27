@@ -10,9 +10,11 @@ import com.example.inventoryservice.inventory.ApplicationProperties;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.resilience.annotation.EnableResilientMethods;
 
 @SpringBootApplication
 @EnableConfigurationProperties({ApplicationProperties.class})
+@EnableResilientMethods
 class InventoryServiceApplication {
 
     public static void main(String[] args) {

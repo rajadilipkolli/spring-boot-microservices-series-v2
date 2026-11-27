@@ -1,13 +1,24 @@
-jwt:
-  secret-key: ecf1222c-88fd-47f3-988f-bdd78bade1ad
 management:
   endpoint:
     gateway:
       access: READ_ONLY
+    health:
+      show-details: when_authorized
+    metrics:
+      tags:
+        application: api-gateway
+    prometheus:
+      metrics:
+        export:
+          enabled: true
   endpoints:
     web:
       exposure:
-        include: '*'
+        include:
+          - health
+          - info
+          - metrics
+          - prometheus
   info:
     git:
       mode: full
@@ -20,17 +31,14 @@ spring:
     gateway:
       server:
         webflux:
-          global-filter:
-            local-response-cache:
-              enabled: false
-          filter:
-            local-response-cache:
-              enabled: true
           discovery:
             locator:
               enabled: true
           metrics:
             enabled: true
+          global-filter:
+            local-response-cache:
+              enabled: false
           httpclient:
             connect-timeout: 1000
             response-timeout: 5s
@@ -41,6 +49,7 @@ spring:
                 - Path=/order-service/**
               uri: lb://order-service
               filters:
+                - TokenRelay=
                 - name: RequestRateLimiter
                   args:
                     redis-rate-limiter:
@@ -51,6 +60,7 @@ spring:
                 - Path=/inventory-service/**
               uri: lb://inventory-service
               filters:
+                - TokenRelay=
                 - name: CircuitBreaker
                   args:
                     name: exampleSlowCircuitBreaker
@@ -59,10 +69,7 @@ spring:
               predicates:
                 - Path=/catalog-service/**
               filters:
-                - name: LocalResponseCache
-                  args:
-                    size: 10MB
-                    timeToLive: 1m
+                - TokenRelay=
                 - name: Retry
                   args:
                     retries: 3
@@ -77,6 +84,8 @@ spring:
               predicates:
                 - Path=/payment-service/**
               uri: lb://payment-service
+              filters:
+                - TokenRelay=
     refresh:
       enabled: false
   config:
@@ -84,24 +93,7 @@ spring:
   webflux:
     problemdetails:
       enabled: true
-  threads:
-    virtual:
-      enabled: true
 #    base-path: /${spring.application.name}
-
-resilience4j:
-  circuitbreaker:
-    instances:
-      catalogService:
-        slidingWindowSize: 10
-        permittedNumberOfCallsInHalfOpenState: 5
-        failureRateThreshold: 50
-        waitDurationInOpenState: 10000
-        registerHealthIndicator: true
-  timelimiter:
-    instances:
-      catalogService:
-        timeoutDuration: 3s
 
 springdoc:
   cache:
@@ -116,3 +108,25 @@ springdoc:
     group: api-gateway
     pathsToMatch: /**
 #  packagesToScan: com.example.api.gateway.web
+
+
+
+gateway:
+  delay-between-services: 5s
+  request-timeout: 10s
+  workflow-timeout: 45s
+
+  connection-timeout: 2s
+  response-timeout: 8s
+  pending-acquire-timeout: 2s
+
+  max-idle-time: 30s
+  max-life-time: 5m
+  evict-in-background: 30s
+
+  max-connections: 100
+
+  service-urls:
+    CATALOG: "http://CATALOG-SERVICE/catalog-service/api/catalog/generate"
+    INVENTORY: "http://INVENTORY-SERVICE/inventory-service/api/inventory/generate"
+    ORDER: "http://ORDER-SERVICE/order-service/api/orders/generate"

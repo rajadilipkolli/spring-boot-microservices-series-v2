@@ -23,16 +23,22 @@ import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 @Configuration(proxyBeanMethods = false)
 @EnableWebSecurity
 @EnableMethodSecurity
-class SecurityConfig {
+public class SecurityConfig {
     private final ClientRegistrationRepository clientRegistrationRepository;
 
-    SecurityConfig(ClientRegistrationRepository clientRegistrationRepository) {
+    /**
+     * Creates security configuration using the client registrations for OIDC logout.
+     *
+     * @param clientRegistrationRepository registered OAuth2 clients
+     */
+    public SecurityConfig(ClientRegistrationRepository clientRegistrationRepository) {
         this.clientRegistrationRepository = clientRegistrationRepository;
     }
 
     /**
      * Configures public routes, authenticated access, OAuth2 login, logout, and response headers.
-     * Registration bypasses CSRF checks; other requests use cookie-based CSRF protection.
+     * Prometheus and metrics endpoints require the OPERATOR role; other nonpublic routes require
+     * authentication. Uses cookie-based CSRF protection across all endpoints.
      *
      * @param http the security configuration builder
      * @param userAuthoritiesMapper mapper for authorities supplied by the identity provider
@@ -42,14 +48,13 @@ class SecurityConfig {
     SecurityFilterChain securityFilterChain(HttpSecurity http, GrantedAuthoritiesMapper userAuthoritiesMapper) {
         http.authorizeHttpRequests(c -> c.requestMatchers(SecurityConstants.PUBLIC_URLS)
                         .permitAll()
+                        .requestMatchers("/actuator/prometheus", "/actuator/metrics", "/actuator/metrics/**")
+                        .hasRole("OPERATOR")
                         .anyRequest()
                         .authenticated())
                 .cors(Customizer.withDefaults())
-                .csrf(
-                        csrf -> csrf.ignoringRequestMatchers("/api/register") // Allow registration without CSRF
-                                .csrfTokenRepository(
-                                        CookieCsrfTokenRepository.withHttpOnlyFalse()) // Store token in a cookie
-                        )
+                .csrf(csrf -> csrf.csrfTokenRepository(
+                        CookieCsrfTokenRepository.withHttpOnlyFalse())) // Store token in a cookie
                 .oauth2Login(oauth2 -> oauth2.loginPage("/login")
                         .defaultSuccessUrl("/", true)
                         .userInfoEndpoint(userInfo -> userInfo.userAuthoritiesMapper(userAuthoritiesMapper)))

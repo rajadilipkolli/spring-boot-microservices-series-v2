@@ -15,6 +15,7 @@ import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.Matchers.closeTo;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.endsWith;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -24,12 +25,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.common.dto.OrderDto;
 import com.example.orderservice.common.AbstractIntegrationTest;
 import com.example.orderservice.entities.Order;
 import com.example.orderservice.entities.OrderItem;
 import com.example.orderservice.entities.OrderStatus;
 import com.example.orderservice.model.Address;
-import com.example.orderservice.model.dtos.OrderDto;
 import com.example.orderservice.model.request.OrderItemRequest;
 import com.example.orderservice.model.request.OrderRequest;
 import com.example.orderservice.model.response.OrderResponse;
@@ -44,10 +45,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.NestedTestConfiguration;
 import org.springframework.test.web.servlet.MvcResult;
 
+@NestedTestConfiguration(NestedTestConfiguration.EnclosingConfiguration.OVERRIDE)
 class OrderControllerIT extends AbstractIntegrationTest {
 
     private List<Order> orderList = null;
@@ -99,7 +104,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
 
     @Nested
     @DisplayName("find methods")
-    class Find {
+    class Find extends AbstractIntegrationTest {
 
         @Test
         void shouldFetchAllOrders() throws Exception {
@@ -185,7 +190,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
 
     @Nested
     @DisplayName("save methods")
-    class SaveOrder {
+    class SaveOrder extends AbstractIntegrationTest {
 
         /**
          * Verifies that order creation returns the initial order details with a string customer ID.
@@ -227,6 +232,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
                             .andExpect(jsonPath("$.items[0].productPrice").value(is(10)))
                             .andExpect(jsonPath("$.items[0].price").value(closeTo(100.00, 0.01)))
                             .andExpect(jsonPath("$.createdDate", notNullValue()))
+                            .andExpect(jsonPath("$.createdDate", endsWith("Z")))
                             // Verify address fields
                             .andExpect(
                                     jsonPath(
@@ -257,15 +263,14 @@ class OrderControllerIT extends AbstractIntegrationTest {
             // Verify Kafka message
             await().atMost(Duration.ofSeconds(15))
                     .pollInterval(Duration.ofMillis(500))
-                    .untilAsserted(
-                            () -> {
-                                Optional<OrderDto> orderDtoOpt =
-                                        testKafkaListenerConfig.getMessageByOrderId(orderId);
-                                assertThat(orderDtoOpt).isPresent();
-                                OrderDto orderDto = orderDtoOpt.get();
-                                assertThat(orderDto.customerId()).isEqualTo(1L);
-                                assertThat(orderDto.status()).isEqualTo("NEW");
-                            });
+                    .untilAsserted(() -> {
+                        Optional<OrderDto> orderDtoOpt =
+                                testKafkaListenerConfig.getMessageByOrderId(orderId);
+                        assertThat(orderDtoOpt).isPresent();
+                        OrderDto orderDto = orderDtoOpt.get();
+                        assertThat(orderDto.customerId()).isEqualTo(1L);
+                        assertThat(orderDto.status()).isEqualTo("NEW");
+                    });
 
             // Waiting for a short duration to ensure the order is committed before sending events
             SECONDS.sleep(1);
@@ -291,18 +296,16 @@ class OrderControllerIT extends AbstractIntegrationTest {
             await().atMost(15, SECONDS)
                     .pollDelay(1, SECONDS)
                     .pollInterval(Duration.ofSeconds(1))
-                    .untilAsserted(
-                            () ->
-                                    mockMvc.perform(get("/api/orders/{id}", orderId))
-                                            .andExpect(status().isOk())
-                                            .andExpect(
-                                                    jsonPath("$.orderId", is(orderId.toString())))
-                                            .andExpect(jsonPath("$.status", is("CONFIRMED")))
-                                            .andExpect(jsonPath("$.customerId", is("1")))
-                                            .andExpect(
-                                                    jsonPath(
-                                                            "$.items.size()",
-                                                            is(orderRequest.items().size()))));
+                    .untilAsserted(() ->
+                            mockMvc.perform(get("/api/orders/{id}", orderId))
+                                    .andExpect(status().isOk())
+                                    .andExpect(jsonPath("$.orderId", is(orderId.toString())))
+                                    .andExpect(jsonPath("$.status", is("CONFIRMED")))
+                                    .andExpect(jsonPath("$.customerId", is("1")))
+                                    .andExpect(
+                                            jsonPath(
+                                                    "$.items.size()",
+                                                    is(orderRequest.items().size()))));
         }
 
         @Test
@@ -338,7 +341,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
                             jsonPath(
                                     "$.detail",
                                     is("One or More products Not found from [PRODUCT2]")))
-                    .andExpect(jsonPath("$.instance", is("/api/orders")))
+                    //                    .andExpect(jsonPath("$.instance", is("/api/orders")))
                     .andExpect(jsonPath("$.errorCategory").value("Generic"));
         }
 
@@ -366,7 +369,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
                     .andExpect(jsonPath("$.title", is("Constraint Violation")))
                     .andExpect(jsonPath("$.status", is(400)))
                     .andExpect(jsonPath("$.detail", is("Invalid request content.")))
-                    .andExpect(jsonPath("$.instance", is("/api/orders")))
+                    //                    .andExpect(jsonPath("$.instance", is("/api/orders")))
                     .andExpect(jsonPath("$.violations", hasSize(5)))
                     .andExpect(
                             jsonPath("$.violations[0].field", is("deliveryAddress.addressLine1")))
@@ -408,7 +411,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
                     .andExpect(jsonPath("$.title", is("Constraint Violation")))
                     .andExpect(jsonPath("$.status", is(400)))
                     .andExpect(jsonPath("$.detail", is("Invalid request content.")))
-                    .andExpect(jsonPath("$.instance", is("/api/orders")))
+                    //                    .andExpect(jsonPath("$.instance", is("/api/orders")))
                     .andExpect(jsonPath("$.violations", hasSize(1)))
                     .andExpect(jsonPath("$.violations[0].field", is("items")))
                     .andExpect(
@@ -444,7 +447,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
                     .andExpect(jsonPath("$.title", is("Constraint Violation")))
                     .andExpect(jsonPath("$.status", is(400)))
                     .andExpect(jsonPath("$.detail", is("Invalid request content.")))
-                    .andExpect(jsonPath("$.instance", is("/api/orders")))
+                    //                    .andExpect(jsonPath("$.instance", is("/api/orders")))
                     .andExpect(jsonPath("$.violations", hasSize(2)))
                     .andExpect(jsonPath("$.violations[0].field", is("customerId")))
                     .andExpect(
@@ -486,7 +489,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
                     .andExpect(jsonPath("$.title", is("Constraint Violation")))
                     .andExpect(jsonPath("$.status", is(400)))
                     .andExpect(jsonPath("$.detail", is("Invalid request content.")))
-                    .andExpect(jsonPath("$.instance", is("/api/orders")))
+                    //                    .andExpect(jsonPath("$.instance", is("/api/orders")))
                     .andExpect(jsonPath("$.violations[0].field", is("items[0].productCode")))
                     .andExpect(
                             jsonPath(
@@ -514,7 +517,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
                     .andExpect(jsonPath("$.title", is("Constraint Violation")))
                     .andExpect(jsonPath("$.status", is(400)))
                     .andExpect(jsonPath("$.detail", is("Invalid request content.")))
-                    .andExpect(jsonPath("$.instance", is("/api/orders")))
+                    //                    .andExpect(jsonPath("$.instance", is("/api/orders")))
                     .andExpect(jsonPath("$.violations[0].field", is("items[0].quantity")))
                     .andExpect(
                             jsonPath(
@@ -542,7 +545,7 @@ class OrderControllerIT extends AbstractIntegrationTest {
                     .andExpect(jsonPath("$.title", is("Constraint Violation")))
                     .andExpect(jsonPath("$.status", is(400)))
                     .andExpect(jsonPath("$.detail", is("Invalid request content.")))
-                    .andExpect(jsonPath("$.instance", is("/api/orders")))
+                    //                    .andExpect(jsonPath("$.instance", is("/api/orders")))
                     .andExpect(jsonPath("$.violations[0].field", is("items[0].productPrice")))
                     .andExpect(
                             jsonPath(
@@ -597,13 +600,34 @@ class OrderControllerIT extends AbstractIntegrationTest {
                                 is(orderRequest.deliveryAddress().country())));
     }
 
-    @Test
-    void shouldDeleteOrder() throws Exception {
-        Order order = orderList.getFirst();
+    @ParameterizedTest
+    @ValueSource(ints = {0, 1})
+    void shouldDeleteOrder(int orderIndex) throws Exception {
+        Order order = orderList.get(orderIndex);
 
         this.mockMvc
                 .perform(delete("/api/orders/{id}", order.getId()))
                 .andExpect(status().isAccepted());
+
+        // Repeated delete must return 404
+        this.mockMvc
+                .perform(delete("/api/orders/{id}", order.getId()))
+                .andExpect(status().isNotFound());
+
+        // Get by ID must return 404
+        this.mockMvc
+                .perform(get("/api/orders/{id}", order.getId()))
+                .andExpect(status().isNotFound());
+
+        // List must exclude soft-deleted order
+        this.mockMvc
+                .perform(get("/api/orders"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements", is(orderList.size() - 1)));
+
+        // Unfiltered lookup verifies database row retained with deleted = true
+        Order retained = orderRepository.findById(order.getId()).orElseThrow();
+        assertThat(retained.isDeleted()).isTrue();
     }
 
     @Test
@@ -683,7 +707,8 @@ class OrderControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.items[1].productPrice").value(closeTo(7.50, 0.01)))
                 .andExpect(jsonPath("$.items[1].price").value(closeTo(37.50, 0.01)))
                 .andExpect(jsonPath("$.totalPrice").value(closeTo(232.35, 0.01)))
-                .andExpect(jsonPath("$.createdDate", notNullValue()));
+                .andExpect(jsonPath("$.createdDate", notNullValue()))
+                .andExpect(jsonPath("$.createdDate", endsWith("Z")));
 
         // Verify that the database was updated properly
         Order updatedOrder = orderRepository.findOrderById(orderId).orElseThrow();

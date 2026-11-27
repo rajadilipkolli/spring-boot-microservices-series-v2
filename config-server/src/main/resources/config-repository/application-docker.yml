@@ -1,4 +1,3 @@
-
 spring:
   datasource:
     password: ${DB_PASSWORD:secret}
@@ -10,6 +9,12 @@ spring:
   threads:
     virtual:
       enabled: true
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:9191/realms/retailstore}
+          jwk-set-uri: ${KEYCLOAK_JWK_SET_URI:http://keycloak:9191/realms/retailstore/protocol/openid-connect/certs}
 eureka:
   client:
     service-url:

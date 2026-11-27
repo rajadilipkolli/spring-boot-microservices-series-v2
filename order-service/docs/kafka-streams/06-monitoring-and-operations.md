@@ -3,9 +3,9 @@
 ## 📖 Table of Contents
 1. [Key Metrics Dashboard](#key-metrics-dashboard)
 2. [Dead Letter Queue Monitoring](#dead-letter-queue-monitoring)
-3. [Health Checks & Diagnostics](#health-checks--diagnostics)
+3. [Health Checks & Diagnostics](#health-checks-diagnostics)
 4. [Performance Optimization](#performance-optimization)
-5. [Alerting & Incident Response](#alerting--incident-response)
+5. [Alerting & Incident Response](#alerting-incident-response)
 6. [Troubleshooting Guide](#troubleshooting-guide)
 7. [Operational Runbooks](#operational-runbooks)
 
@@ -697,22 +697,22 @@ Solutions:
 
 ```bash
 # Check Kafka Streams health
-curl -s http://localhost:18282/actuator/health/kafkaStreams | jq
+curl -s http://localhost:18282/order-service/actuator/health/kafkaStreams | jq
 
 # Get thread information
-curl -s http://localhost:18282/actuator/kafka-streams/threads | jq
+curl -s http://localhost:18282/order-service/actuator/kafka-streams/threads | jq
 
 # Check store information
-curl -s http://localhost:18282/actuator/kafka-streams/stores | jq
+curl -s http://localhost:18282/order-service/actuator/kafka-streams/stores | jq
 
 # View application metrics
-curl -s http://localhost:18282/actuator/metrics/kafka.streams.thread.process.rate | jq
+curl -s http://localhost:18282/order-service/actuator/metrics/kafka.streams.thread.process.rate | jq
 
 # Check consumer lag
-curl -s http://localhost:18282/actuator/metrics/kafka.consumer.lag.sum | jq
+curl -s http://localhost:18282/order-service/actuator/metrics/kafka.consumer.lag.sum | jq
 
 # Monitor JVM memory
-curl -s http://localhost:18282/actuator/metrics/jvm.memory.used | jq
+curl -s http://localhost:18282/order-service/actuator/metrics/jvm.memory.used | jq
 ```
 
 ## 📋 Operational Runbooks

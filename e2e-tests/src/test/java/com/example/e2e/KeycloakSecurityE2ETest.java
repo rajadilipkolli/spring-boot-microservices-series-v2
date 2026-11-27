@@ -21,10 +21,17 @@ class KeycloakSecurityE2ETest {
     }
 
     @Test
-    @DisplayName("Should successfully authenticate with Keycloak and acquire access token")
+    @DisplayName("Should successfully authenticate with Keycloak and acquire access token via ROPC")
     void shouldAcquireKeycloakAccessToken() {
         String token = KeycloakAuthClient.getAccessToken();
         assertThat(token).as("Keycloak OAuth2 token should not be null").isNotBlank();
+    }
+
+    @Test
+    @DisplayName("Should successfully acquire client credentials token for retailstore-webapp")
+    void shouldAcquireClientCredentialsToken() {
+        String token = KeycloakAuthClient.getClientCredentialsToken();
+        assertThat(token).as("Client credentials token should not be null").isNotBlank();
     }
 
     @Test

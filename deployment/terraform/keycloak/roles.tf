@@ -25,3 +25,15 @@ resource "keycloak_role" "webapp_admin_role" {
   name        = "ADMIN"
   description = "retail store Administrator"
 }
+
+# ---------------------------------------------------------------------------
+# Client role: OPERATOR on retailstore-webapp
+#
+# Configured for Prometheus/metrics endpoint authorization in retail-store-webapp.
+# ---------------------------------------------------------------------------
+resource "keycloak_role" "webapp_operator_role" {
+  realm_id    = keycloak_realm.retailstore.id
+  client_id   = keycloak_openid_client.retailstore_webapp.id
+  name        = "OPERATOR"
+  description = "retail store Operator"
+}

@@ -3,70 +3,48 @@ package com.example.retailstore.webapp.services;
 import java.util.Locale;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.client.ClientAuthorizationRequiredException;
-import org.springframework.security.oauth2.client.OAuth2AuthorizeRequest;
-import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
-import org.springframework.security.oauth2.client.OAuth2AuthorizedClientManager;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
-import org.springframework.security.oauth2.core.oidc.user.DefaultOidcUser;
+import org.springframework.security.oauth2.core.oidc.user.OidcUser;
+import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 
-@Service
+@Service("securityHelper")
 public class SecurityHelper {
-    private final OAuth2AuthorizedClientManager authorizedClientManager;
 
-    public SecurityHelper(OAuth2AuthorizedClientManager authorizedClientManager) {
-        this.authorizedClientManager = authorizedClientManager;
-    }
+    /** Creates a helper that reads the current thread's security context. */
+    public SecurityHelper() {}
 
+    /**
+     * Returns the preferred username of an authenticated OAuth2 principal, or null if unavailable.
+     */
     public String getUsername() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = null;
         if (authentication != null
                 && authentication.isAuthenticated()
-                && authentication.getPrincipal() instanceof DefaultOidcUser principal) {
+                && authentication.getPrincipal() instanceof OAuth2User principal) {
             username = principal.getAttribute("preferred_username");
         }
         return username;
     }
 
     /**
-     * Obtains an access token for the current OAuth2 authentication.
-     *
-     * @return the token value, or null when authentication is not OAuth2, no token is available,
-     *     or client authorization is required
+     * Returns the OAuth2 user's email, or the authentication name for other authentication types,
+     * in lowercase using the root locale. Returns null if authentication or the OAuth2 email is
+     * absent.
      */
-    public String getAccessToken() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (!(authentication instanceof OAuth2AuthenticationToken oauthToken)) {
-            return null;
-        }
-        OAuth2AuthorizeRequest authorizeRequest = OAuth2AuthorizeRequest.withClientRegistrationId(
-                        oauthToken.getAuthorizedClientRegistrationId())
-                .principal(oauthToken)
-                .build();
-
-        try {
-            OAuth2AuthorizedClient client = this.authorizedClientManager.authorize(authorizeRequest);
-
-            if (client == null || client.getAccessToken() == null) {
-                return null;
-            }
-
-            return client.getAccessToken().getTokenValue();
-        } catch (ClientAuthorizationRequiredException e) {
-            return null;
-        }
-    }
-
     public String getLoggedInUserEmail() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null) {
             return null;
         }
-        if (authentication instanceof OAuth2AuthenticationToken) {
-            DefaultOidcUser principal = (DefaultOidcUser) authentication.getPrincipal();
-            String email = principal.getEmail();
+        if (authentication instanceof OAuth2AuthenticationToken
+                && authentication.getPrincipal() instanceof OAuth2User oauth2User) {
+            if (oauth2User instanceof OidcUser oidcUser) {
+                String email = oidcUser.getEmail();
+                return email != null ? email.toLowerCase(Locale.ROOT) : null;
+            }
+            String email = oauth2User.getAttribute("email");
             return email != null ? email.toLowerCase(Locale.ROOT) : null;
         }
         return authentication.getName().toLowerCase(Locale.ROOT);

@@ -21,9 +21,8 @@ class HttpClientConfig {
             ObservationRegistry observationRegistry, ApplicationProperties applicationProperties) {
         return groups ->
                 groups.filterByName("order")
-                        .forEachClient(
-                                (group, builder) ->
-                                        builder.baseUrl(applicationProperties.getOrderServiceUrl())
-                                                .observationRegistry(observationRegistry));
+                        .forEachClient((group, builder) ->
+                                builder.baseUrl(applicationProperties.getOrderServiceUrl())
+                                        .observationRegistry(observationRegistry));
     }
 }

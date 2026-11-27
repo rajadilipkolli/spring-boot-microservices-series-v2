@@ -1,8 +1,8 @@
 /*** Licensed under MIT License Copyright (c) 2024-2026 Raja Kolli. ***/
 package com.example.paymentservice.util;
 
+import com.example.common.dto.OrderDto;
 import com.example.paymentservice.jooq.tables.records.CustomersRecord;
-import com.example.paymentservice.model.payload.OrderDto;
 import java.math.BigDecimal;
 
 public class TestData {
@@ -26,6 +26,7 @@ public class TestData {
                 nonExistentCustomerId,
                 orderDto.status(),
                 orderDto.source(),
-                orderDto.items());
+                orderDto.items(),
+                orderDto.attemptId());
     }
 }

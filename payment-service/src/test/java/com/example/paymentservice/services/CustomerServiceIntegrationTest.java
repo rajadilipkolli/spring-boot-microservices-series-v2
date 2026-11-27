@@ -100,12 +100,11 @@ class CustomerServiceIntegrationTest extends AbstractIntegrationTest {
         assertThatThrownBy(() -> customerService.saveCustomer(requestWithNullName))
                 .isInstanceOf(DataIntegrityViolationException.class)
                 .isNotInstanceOf(CustomerExistsException.class)
-                .satisfies(
-                        ex -> {
-                            PSQLException psqlEx = findCause(ex, PSQLException.class);
-                            assertThat((Throwable) psqlEx).isNotNull();
-                            assertThat(psqlEx.getSQLState()).isEqualTo("23502");
-                        });
+                .satisfies(ex -> {
+                    PSQLException psqlEx = findCause(ex, PSQLException.class);
+                    assertThat((Throwable) psqlEx).isNotNull();
+                    assertThat(psqlEx.getSQLState()).isEqualTo("23502");
+                });
 
         assertThat(customerDAO.findByEmail("fresh@example.com")).isEmpty();
     }

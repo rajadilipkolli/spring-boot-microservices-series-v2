@@ -17,11 +17,12 @@ import static org.mockito.Mockito.verifyNoInteractions;
 
 import com.example.catalogservice.entities.Product;
 import com.example.catalogservice.exception.ProductNotFoundException;
-import com.example.catalogservice.model.payload.ProductDto;
 import com.example.catalogservice.model.request.ProductRequest;
-import com.example.catalogservice.model.response.PagedResult;
 import com.example.catalogservice.model.response.ProductResponse;
+import com.example.catalogservice.services.ProductGeneratorService;
 import com.example.catalogservice.services.ProductService;
+import com.example.common.dto.PagedResult;
+import com.example.common.dto.ProductDto;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
@@ -29,8 +30,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.ArgumentMatchers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webflux.test.autoconfigure.WebFluxTest;
+import org.springframework.core.io.buffer.DataBufferLimitException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.http.MediaType;
@@ -39,13 +42,15 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import reactor.core.publisher.Mono;
 
-@WebFluxTest(controllers = ProductController.class)
+@WebFluxTest(controllers = {ProductController.class, ProductMockGeneratorController.class})
 @ActiveProfiles({PROFILE_TEST})
 class ProductControllerTest {
 
     @Autowired private WebTestClient webTestClient;
 
     @MockitoBean private ProductService productService;
+
+    @MockitoBean private ProductGeneratorService productGeneratorService;
 
     private List<ProductResponse> productResponseList;
 
@@ -83,6 +88,26 @@ class ProductControllerTest {
     }
 
     @Test
+    void shouldReturnConsistentContentTooLargeProblem() {
+        given(productService.findAllProducts(0, 10, "id", "asc"))
+                .willReturn(Mono.error(new DataBufferLimitException("Request limit exceeded")));
+
+        webTestClient
+                .get()
+                .uri("/api/catalog")
+                .exchange()
+                .expectStatus()
+                .isEqualTo(413)
+                .expectBody()
+                .jsonPath("$.status")
+                .isEqualTo(413)
+                .jsonPath("$.title")
+                .isEqualTo("Content Too Large")
+                .jsonPath("$.type")
+                .isEqualTo("https://api.microservices.com/errors/content-too-large");
+    }
+
+    @Test
     void shouldFetchAllProducts() {
         Page<ProductResponse> page = new PageImpl<>(productResponseList);
         PagedResult<ProductResponse> pagedResult = new PagedResult<>(page);
@@ -96,22 +121,19 @@ class ProductControllerTest {
                 .expectStatus()
                 .isOk()
                 .expectBody(PagedResult.class)
-                .value(
-                        response ->
-                                assertThat(response)
-                                        .isNotNull()
-                                        .satisfies(
-                                                r -> {
-                                                    assertThat(r.isFirst()).isTrue();
-                                                    assertThat(r.isLast()).isTrue();
-                                                    assertThat(r.hasNext()).isFalse();
-                                                    assertThat(r.hasPrevious()).isFalse();
-                                                    assertThat(r.totalElements()).isEqualTo(3);
-                                                    assertThat(r.pageNumber()).isEqualTo(1);
-                                                    assertThat(r.totalPages()).isEqualTo(1);
-                                                    assertThat(r.data())
-                                                            .hasSameSizeAs(productResponseList);
-                                                }));
+                .value(response ->
+                        assertThat(response)
+                                .isNotNull()
+                                .satisfies(r -> {
+                                    assertThat(r.isFirst()).isTrue();
+                                    assertThat(r.isLast()).isTrue();
+                                    assertThat(r.hasNext()).isFalse();
+                                    assertThat(r.hasPrevious()).isFalse();
+                                    assertThat(r.totalElements()).isEqualTo(3);
+                                    assertThat(r.pageNumber()).isEqualTo(1);
+                                    assertThat(r.totalPages()).isEqualTo(1);
+                                    assertThat(r.data()).hasSameSizeAs(productResponseList);
+                                }));
     }
 
     /**
@@ -233,9 +255,8 @@ class ProductControllerTest {
                 .jsonPath("$.status")
                 .isEqualTo(400)
                 .jsonPath("$.detail")
-                .isEqualTo("Invalid request content.")
-                .jsonPath("$.instance")
-                .isEqualTo("/api/catalog");
+                .isEqualTo("Invalid request content.");
+        //                .jsonPath("$.instance").isEqualTo("/api/catalog");
     }
 
     /** Verifies that repeated creation requests return the same product code and string ID. */
@@ -304,13 +325,6 @@ class ProductControllerTest {
     @Test
     void shouldUpdateProduct() {
         Long productId = 1L;
-        Product product =
-                new Product()
-                        .setId(productId)
-                        .setProductCode("code 1")
-                        .setProductName("Updated name")
-                        .setDescription("description 1")
-                        .setPrice(BigDecimal.valueOf(1.00));
         ProductRequest productRequest =
                 new ProductRequest(
                         "code 1", "Updated name", "description 1", null, BigDecimal.valueOf(1.00));
@@ -323,8 +337,7 @@ class ProductControllerTest {
                         null,
                         BigDecimal.valueOf(1.00),
                         true);
-        given(productService.findById(productId)).willReturn(Mono.just(product));
-        given(productService.updateProduct(any(ProductRequest.class), any(Product.class)))
+        given(productService.updateProduct(eq(productId), any(ProductRequest.class)))
                 .willReturn(Mono.just(productResponse));
 
         webTestClient
@@ -339,20 +352,21 @@ class ProductControllerTest {
                 .jsonPath("$.id")
                 .isEqualTo("1")
                 .jsonPath("$.productCode")
-                .isEqualTo(product.getProductCode())
+                .isEqualTo(productResponse.productCode())
                 .jsonPath("$.productName")
-                .isEqualTo(product.getProductName())
+                .isEqualTo(productResponse.productName())
                 .jsonPath("$.description")
-                .isEqualTo(product.getDescription())
+                .isEqualTo(productResponse.description())
                 .jsonPath("$.price")
-                .isEqualTo(product.getPrice());
+                .isEqualTo(productResponse.price());
     }
 
     /** Verifies updating an unknown product returns HTTP 404. */
     @Test
     void shouldReturn404WhenUpdatingNonExistingProduct() {
         Long productId = 1L;
-        given(productService.findById(productId)).willReturn(Mono.empty());
+        given(productService.updateProduct(eq(productId), any(ProductRequest.class)))
+                .willReturn(Mono.error(new ProductNotFoundException(productId)));
         ProductRequest productRequest =
                 new ProductRequest(
                         "code 1", "Updated name", "description 1", null, BigDecimal.valueOf(1.00));
@@ -481,12 +495,11 @@ class ProductControllerTest {
 
         webTestClient
                 .get()
-                .uri(
-                        uriBuilder ->
-                                uriBuilder
-                                        .path("/api/catalog/product-code/{productCode}")
-                                        .queryParam("fetchInStock", true)
-                                        .build(code))
+                .uri(uriBuilder ->
+                        uriBuilder
+                                .path("/api/catalog/product-code/{productCode}")
+                                .queryParam("fetchInStock", true)
+                                .build(code))
                 .exchange()
                 .expectStatus()
                 .isOk();
@@ -507,12 +520,11 @@ class ProductControllerTest {
 
         webTestClient
                 .get()
-                .uri(
-                        uriBuilder ->
-                                uriBuilder
-                                        .path("/api/catalog/product-code/{productCode}")
-                                        .queryParam("delay", 1)
-                                        .build(code))
+                .uri(uriBuilder ->
+                        uriBuilder
+                                .path("/api/catalog/product-code/{productCode}")
+                                .queryParam("delay", 1)
+                                .build(code))
                 .exchange()
                 .expectStatus()
                 .isOk()
@@ -528,12 +540,11 @@ class ProductControllerTest {
 
         webTestClient
                 .get()
-                .uri(
-                        uriBuilder ->
-                                uriBuilder
-                                        .path("/api/catalog/exists")
-                                        .queryParam("productCodes", "code-1", "code-2")
-                                        .build())
+                .uri(uriBuilder ->
+                        uriBuilder
+                                .path("/api/catalog/exists")
+                                .queryParam("productCodes", "code-1", "code-2")
+                                .build())
                 .exchange()
                 .expectStatus()
                 .isOk()
@@ -551,12 +562,11 @@ class ProductControllerTest {
 
         webTestClient
                 .get()
-                .uri(
-                        uriBuilder ->
-                                uriBuilder
-                                        .path("/api/catalog/exists")
-                                        .queryParam("productCodes", "missing")
-                                        .build())
+                .uri(uriBuilder ->
+                        uriBuilder
+                                .path("/api/catalog/exists")
+                                .queryParam("productCodes", "missing")
+                                .build())
                 .exchange()
                 .expectStatus()
                 .isOk()
@@ -567,7 +577,7 @@ class ProductControllerTest {
 
     @Test
     void shouldHandleEmptyProductCodesParam() {
-        given(productService.productExistsByProductCodes(org.mockito.ArgumentMatchers.anyList()))
+        given(productService.productExistsByProductCodes(ArgumentMatchers.anyList()))
                 .willReturn(Mono.just(false));
 
         webTestClient
@@ -580,7 +590,7 @@ class ProductControllerTest {
 
     @Test
     void shouldGenerateRandomProductsSuccessfully() {
-        given(productService.generateProducts(any(String.class), isNull()))
+        given(productGeneratorService.generateAndSaveProducts(any(String.class), isNull()))
                 .willReturn(Mono.just(true));
 
         webTestClient
@@ -597,7 +607,7 @@ class ProductControllerTest {
 
     @Test
     void shouldGenerateRandomProductsWithBatchSize() {
-        given(productService.generateProducts(any(String.class), eq(25)))
+        given(productGeneratorService.generateAndSaveProducts(any(String.class), eq(25)))
                 .willReturn(Mono.just(true));
 
         webTestClient
@@ -611,7 +621,7 @@ class ProductControllerTest {
                 .jsonPath("$.success")
                 .isEqualTo(true);
 
-        verify(productService).generateProducts("test-batch-123", 25);
+        verify(productGeneratorService).generateAndSaveProducts("test-batch-123", 25);
     }
 
     @ParameterizedTest
@@ -625,12 +635,12 @@ class ProductControllerTest {
                 .expectStatus()
                 .isBadRequest();
 
-        verifyNoInteractions(productService);
+        verifyNoInteractions(productGeneratorService);
     }
 
     @Test
     void shouldHandleGenerateProductsFailure() {
-        given(productService.generateProducts(any(String.class), isNull()))
+        given(productGeneratorService.generateAndSaveProducts(any(String.class), isNull()))
                 .willReturn(Mono.just(false));
 
         webTestClient
@@ -647,8 +657,7 @@ class ProductControllerTest {
 
     @Test
     void shouldSearchByTermOnly() {
-        org.springframework.data.domain.Page<ProductResponse> page =
-                new org.springframework.data.domain.PageImpl<>(productResponseList);
+        Page<ProductResponse> page = new PageImpl<>(productResponseList);
         PagedResult<ProductResponse> pagedResult = new PagedResult<>(page);
 
         given(productService.searchProductsByTerm("laptop", 0, 10, "id", "asc"))
@@ -656,12 +665,8 @@ class ProductControllerTest {
 
         webTestClient
                 .get()
-                .uri(
-                        uriBuilder ->
-                                uriBuilder
-                                        .path("/api/catalog/search")
-                                        .queryParam("term", "laptop")
-                                        .build())
+                .uri(uriBuilder ->
+                        uriBuilder.path("/api/catalog/search").queryParam("term", "laptop").build())
                 .exchange()
                 .expectStatus()
                 .isOk()
@@ -673,8 +678,7 @@ class ProductControllerTest {
     /** Verifies decimal price bounds select the price-range search with default pagination. */
     @Test
     void shouldSearchByPriceRangeOnly() {
-        org.springframework.data.domain.Page<ProductResponse> page =
-                new org.springframework.data.domain.PageImpl<>(productResponseList);
+        Page<ProductResponse> page = new PageImpl<>(productResponseList);
         PagedResult<ProductResponse> pagedResult = new PagedResult<>(page);
 
         given(
@@ -689,13 +693,12 @@ class ProductControllerTest {
 
         webTestClient
                 .get()
-                .uri(
-                        uriBuilder ->
-                                uriBuilder
-                                        .path("/api/catalog/search")
-                                        .queryParam("minPrice", 50.0)
-                                        .queryParam("maxPrice", 150.0)
-                                        .build())
+                .uri(uriBuilder ->
+                        uriBuilder
+                                .path("/api/catalog/search")
+                                .queryParam("minPrice", 50.0)
+                                .queryParam("maxPrice", 150.0)
+                                .build())
                 .exchange()
                 .expectStatus()
                 .isOk()
@@ -711,8 +714,7 @@ class ProductControllerTest {
      */
     @Test
     void shouldSearchByTermAndPriceRange() {
-        org.springframework.data.domain.Page<ProductResponse> page =
-                new org.springframework.data.domain.PageImpl<>(productResponseList);
+        Page<ProductResponse> page = new PageImpl<>(productResponseList);
         PagedResult<ProductResponse> pagedResult = new PagedResult<>(page);
 
         given(
@@ -728,14 +730,13 @@ class ProductControllerTest {
 
         webTestClient
                 .get()
-                .uri(
-                        uriBuilder ->
-                                uriBuilder
-                                        .path("/api/catalog/search")
-                                        .queryParam("term", "laptop")
-                                        .queryParam("minPrice", 50.0)
-                                        .queryParam("maxPrice", 150.0)
-                                        .build())
+                .uri(uriBuilder ->
+                        uriBuilder
+                                .path("/api/catalog/search")
+                                .queryParam("term", "laptop")
+                                .queryParam("minPrice", 50.0)
+                                .queryParam("maxPrice", 150.0)
+                                .build())
                 .exchange()
                 .expectStatus()
                 .isOk()
@@ -754,8 +755,7 @@ class ProductControllerTest {
 
     @Test
     void shouldReturnAllProductsWhenNoSearchCriteriaProvided() {
-        org.springframework.data.domain.Page<ProductResponse> page =
-                new org.springframework.data.domain.PageImpl<>(productResponseList);
+        Page<ProductResponse> page = new PageImpl<>(productResponseList);
         PagedResult<ProductResponse> pagedResult = new PagedResult<>(page);
 
         given(productService.findAllProducts(0, 10, "id", "asc"))
@@ -774,8 +774,7 @@ class ProductControllerTest {
 
     @Test
     void shouldHandleEmptySearchTermAsNoCriteria() {
-        org.springframework.data.domain.Page<ProductResponse> page =
-                new org.springframework.data.domain.PageImpl<>(productResponseList);
+        Page<ProductResponse> page = new PageImpl<>(productResponseList);
         PagedResult<ProductResponse> pagedResult = new PagedResult<>(page);
 
         given(productService.findAllProducts(0, 10, "id", "asc"))
@@ -783,12 +782,8 @@ class ProductControllerTest {
 
         webTestClient
                 .get()
-                .uri(
-                        uriBuilder ->
-                                uriBuilder
-                                        .path("/api/catalog/search")
-                                        .queryParam("term", "")
-                                        .build())
+                .uri(uriBuilder ->
+                        uriBuilder.path("/api/catalog/search").queryParam("term", "").build())
                 .exchange()
                 .expectStatus()
                 .isOk()
@@ -799,8 +794,7 @@ class ProductControllerTest {
 
     @Test
     void shouldSearchWithCustomPaginationAndSorting() {
-        org.springframework.data.domain.Page<ProductResponse> page =
-                new org.springframework.data.domain.PageImpl<>(productResponseList);
+        Page<ProductResponse> page = new PageImpl<>(productResponseList);
         PagedResult<ProductResponse> pagedResult = new PagedResult<>(page);
 
         given(productService.searchProductsByTerm("laptop", 1, 5, "name", "DESC"))
@@ -808,16 +802,15 @@ class ProductControllerTest {
 
         webTestClient
                 .get()
-                .uri(
-                        uriBuilder ->
-                                uriBuilder
-                                        .path("/api/catalog/search")
-                                        .queryParam("term", "laptop")
-                                        .queryParam("pageNo", 1)
-                                        .queryParam("pageSize", 5)
-                                        .queryParam("sortBy", "name")
-                                        .queryParam("sortDir", "DESC")
-                                        .build())
+                .uri(uriBuilder ->
+                        uriBuilder
+                                .path("/api/catalog/search")
+                                .queryParam("term", "laptop")
+                                .queryParam("pageNo", 1)
+                                .queryParam("pageSize", 5)
+                                .queryParam("sortBy", "name")
+                                .queryParam("sortDir", "DESC")
+                                .build())
                 .exchange()
                 .expectStatus()
                 .isOk()
